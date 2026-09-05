@@ -6,7 +6,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { t } from "../i18n";
 import { C, onThemeChange } from "../theme";
-import { CATEGORIES, GUNLER_UZUN, sortDistricts, needsSummary, venueModeLabel, costModeLabel, formatLabel, relInfo, relColor } from "../data";
+import { CATEGORIES, GUNLER_UZUN, districtCounts, sortDistricts, needsSummary, venueModeLabel, costModeLabel, formatLabel, relInfo, relColor } from "../data";
 import { ILLER, ilceleri } from "../trIlIlce";
 import { Avatar, Stars, SquadDots, EksikBadge, Chip, PickerSheet } from "../components";
 import MarketCard from "./MarketCard";
@@ -136,14 +136,7 @@ export default function HomeScreen({ user, events, onOpen, onAttendance, onChang
   const [cat, setCat] = useState(1); // açılış: ⚽ seçili
   const [kind, setKind] = useState(initialKind);
   const [cityPicker, setCityPicker] = useState(false);
-  const counts = {};
-  events.forEach((e) => {
-    if (e.ended || e.status === "iptal" || e.city !== user.city) return;
-    if ((e.kind || "oyuncu") !== kind) return;
-    if (cat !== 0 && e.cat !== cat) return;
-    if (e.org && blockedIds.includes(e.org.id)) return;
-    if (e.district) counts[e.district] = (counts[e.district] || 0) + 1;
-  });
+  const counts = districtCounts(events, user.city);
   const allDistricts = sortDistricts(ilceleri(user.city), counts);
   const [districtPicker, setDistrictPicker] = useState(false);
   const mineFirst = user.district ? [user.district, ...allDistricts.filter((d) => d !== user.district)] : allDistricts;

@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, Alert, StyleSheet } from "rea
 import { Ionicons } from "@expo/vector-icons";
 import { t } from "../i18n";
 import { C, onThemeChange } from "../theme";
-import { MODE_LABEL, DEFAULT_SETTINGS } from "../data";
+import { MODE_LABEL, DEFAULT_SETTINGS, CATEGORIES } from "../data";
 import { badgesFor } from "../badges";
 import { AvatarPicker } from "../components";
 import { chooseAvatar } from "../avatar";
@@ -26,6 +26,13 @@ export default function ProfileScreen({ user, pendingRate, onRate, onLogout, onS
         {user.totals && (user.totals.goals > 0 || user.totals.assists > 0) && (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6, backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
             <Text style={{ color: "#fff", fontSize: 11, fontWeight: "800" }}>⚽ {user.totals.goals} gol · 🎯 {user.totals.assists} asist</Text>
+          </View>
+        )}
+        {(user.favCats || []).length > 0 && (
+          <View style={{ position: "absolute", right: 14, top: 58, backgroundColor: "rgba(255,255,255,0.14)", borderRadius: 999, paddingHorizontal: 9, paddingVertical: 5, flexDirection: "row", gap: 3 }}>
+            {(user.favCats || []).slice(0, 4).map((cid) => (
+              <Text key={cid} style={{ fontSize: 13 }}>{(CATEGORIES.find((c) => c.id === cid) || {}).icon}</Text>
+            ))}
           </View>
         )}
         {user.mvpCount > 0 && (

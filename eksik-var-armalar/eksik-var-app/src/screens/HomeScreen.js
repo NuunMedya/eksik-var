@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import {
-  View, Text, TouchableOpacity, FlatList, ScrollView, StyleSheet,
+  View, Text, TouchableOpacity, FlatList, ScrollView, Alert, StyleSheet,
   TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import SponsorCard from "./SponsorCard";
+import { injectSponsors } from "../sponsors";
 import { t } from "../i18n";
 import { C, onThemeChange } from "../theme";
-import { CATEGORIES, GUNLER_UZUN, sortDistricts, needsSummary, venueModeLabel, costModeLabel, formatLabel, relInfo, relColor } from "../data";
+import { CATEGORIES, GUNLER_UZUN, districtCounts, sortDistricts, needsSummary, matchesMyPositions, venueModeLabel, costModeLabel, formatLabel, relInfo, relColor } from "../data";
 import { ILLER, ilceleri } from "../trIlIlce";
 import { Avatar, Stars, SquadDots, EksikBadge, Chip, PickerSheet } from "../components";
 import MarketCard from "./MarketCard";
@@ -133,17 +135,13 @@ function Skeleton() {
 
 export default function HomeScreen({ user, events, onOpen, onAttendance, onChangeCity, onNotifications, unreadCount = 0, blockedIds = [], onCreate = () => {}, onBringTeam = () => {}, loading = false, offline = false, sponsors = [], onSponsor = () => {}, market = [], onOpenPlayer = () => {}, onEditListing = () => {}, onOfferPlayer = null, initialKind = "oyuncu" , onCreateRakip, onMatches = () => {}, onOpenShowcase = () => {} }) {
   const [district, setDistrict] = useState("Tümü");
-  const [cat, setCat] = useState(1); // açılış: ⚽ seçili
+  const [cat, setCat] = useState(0);
+  const secCats = (user.favCats && user.favCats.length ? user.favCats : [1, 2, 3, 4]);
+  const [mineOnly, setMineOnly] = useState(false);
   const [kind, setKind] = useState(initialKind);
   const [cityPicker, setCityPicker] = useState(false);
-  const counts = {};
-  events.forEach((e) => {
-    if (e.ended || e.status === "iptal" || e.city !== user.city) return;
-    if ((e.kind || "oyuncu") !== kind) return;
-    if (cat !== 0 && e.cat !== cat) return;
-    if (e.org && blockedIds.includes(e.org.id)) return;
-    if (e.district) counts[e.district] = (counts[e.district] || 0) + 1;
-  });
+  const myPos = user.positions || [];
+  const counts = districtCounts(events, user.city);
   const allDistricts = sortDistricts(ilceleri(user.city), counts);
   const [districtPicker, setDistrictPicker] = useState(false);
   const mineFirst = user.district ? [user.district, ...allDistricts.filter((d) => d !== user.district)] : allDistricts;
@@ -161,7 +159,8 @@ export default function HomeScreen({ user, events, onOpen, onAttendance, onChang
   const rakipSay = canli.filter((e) => e.kind === "rakip").length;
   const list = events.filter(
     (e) => !e.ended && e.status !== "iptal" && (e.kind || "oyuncu") === kind && e.city === user.city && !(e.org && blockedIds.includes(e.org.id)) &&
-      (district === "Tümü" || e.district === district) && (cat === 0 || e.cat === cat)
+      (district === "Tümü" || e.district === district) && (cat === 0 ? secCats.includes(e.cat) : e.cat === cat) &&
+      (!mineOnly || matchesMyPositions(e, myPos))
   );
 
   return (
@@ -172,14 +171,13 @@ export default function HomeScreen({ user, events, onOpen, onAttendance, onChang
             {t("EKSİK")} <Text style={{ color: C.kit }}>VAR</Text>
           </Text>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-          <View style={{ backgroundColor: "rgba(255,255,255,0.14)", borderRadius: 999, paddingHorizontal: 5, paddingVertical: 3, flexDirection: "row", gap: 2 }}>
-            {[1, ...(user.favCats || []).filter((c) => c !== 1)].slice(0, 4).map((cid) => (
-              <TouchableOpacity key={cid} onPress={() => setCat(cat === cid ? 0 : cid)}
-                style={{ width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: cat === cid ? "rgba(255,255,255,0.4)" : "transparent" }}>
-                <Text style={{ fontSize: 13.5 }}>{(CATEGORIES.find((c) => c.id === cid) || {}).icon}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          {(user.favCats || []).length > 0 && (
+            <View style={{ backgroundColor: "rgba(255,255,255,0.14)", borderRadius: 999, paddingHorizontal: 9, paddingVertical: 5, flexDirection: "row", gap: 3 }}>
+              {(user.favCats || []).slice(0, 4).map((cid) => (
+                <Text key={cid} style={{ fontSize: 13 }}>{(CATEGORIES.find((c) => c.id === cid) || {}).icon}</Text>
+              ))}
+            </View>
+          )}
           <TouchableOpacity onPress={onMatches} style={{ padding: 4 }}>
             <Ionicons name="calendar-outline" size={21} color={C.mist} />
           </TouchableOpacity>
@@ -229,6 +227,17 @@ export default function HomeScreen({ user, events, onOpen, onAttendance, onChang
             <Chip label={district !== "Tümü" && !districts.includes(district) ? `${district} ▾` : t("home.otherDistricts")} active={district !== "Tümü" && !districts.includes(district)} onPress={() => setDistrictPicker(true)} />
           )}
         </ScrollView>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8 }}>
+          {myPos.length > 0 && kind === "oyuncu" && (
+            <TouchableOpacity onLongPress={() => Alert.alert(t("Bana uygun"), t("Yalnızca mevkilerinden birine açık yer olan ya da serbest kontenjanı olan ilanları gösterir. Mevkilerini Profil'den değiştirebilirsin."))} onPress={() => setMineOnly((m) => !m)}>
+              <Chip label={t("home.forMe")} active={mineOnly} onPress={() => setMineOnly((m) => !m)} />
+            </TouchableOpacity>
+          )}
+          <Chip label={t("home.all")} active={cat === 0} onPress={() => setCat(0)} />
+          {CATEGORIES.filter((c) => secCats.includes(c.id)).map((c) => (
+            <Chip key={c.id} label={`${c.icon} ${t(c.name)}`} active={cat === c.id} onPress={() => setCat(c.id)} />
+          ))}
+        </ScrollView>
       </View>
 
       {offline && (
@@ -236,9 +245,11 @@ export default function HomeScreen({ user, events, onOpen, onAttendance, onChang
       )}
       {loading && list.length === 0 ? <View style={{ padding: 16 }}><Skeleton /></View> : null}
       <FlatList
-        data={kind === "pazar" ? pazarAra(marketFilter(market, { cat, district })) : loading && list.length === 0 ? [] : list}
+        data={kind === "pazar" ? injectSponsors(pazarAra(marketFilter(market, { cat, district })), sponsors) : loading && list.length === 0 ? [] : injectSponsors(list, sponsors)}
         keyExtractor={(e) => e.id}
-        renderItem={({ item }) => kind === "pazar" ? <MarketCard p={item} onOpen={() => onOpenPlayer(item)} onOffer={onOfferPlayer} />
+        renderItem={({ item }) => item.sponsorItem
+          ? <SponsorCard s={item.s} onPress={() => onSponsor(item.s)} />
+          : kind === "pazar" ? <MarketCard p={item} onOpen={() => onOpenPlayer(item)} onOffer={onOfferPlayer} />
           : item.kind === "rakip" ? <RakipCard ev={item} onOpen={onOpen} /> : <EventCard ev={item} onOpen={onOpen} />}
         contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
         ListHeaderComponent={
@@ -271,18 +282,22 @@ export default function HomeScreen({ user, events, onOpen, onAttendance, onChang
             )}
             {kind === "oyuncu" && (
               <TouchableOpacity onPress={onOpenShowcase} activeOpacity={0.85}
-                style={{ flexDirection: "row", alignItems: "center", gap: 9, backgroundColor: C.isDark ? "#16232E" : "#F0F6FB", borderWidth: 1.5, borderColor: C.isDark ? "#3E5A75" : "#A8C7E4", borderRadius: 16, paddingHorizontal: 13, paddingVertical: 9, marginBottom: 12 }}>
-                <Text style={{ fontSize: 19 }}>🎽</Text>
+                style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: C.turf, borderRadius: 16, padding: 13, marginBottom: 12 }}>
+                <Text style={{ fontSize: 22 }}>🎽</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13.5, fontWeight: "900", color: C.isDark ? "#9CC1E8" : "#3E6C99" }}>{t("Oyuncuyum, takım arıyorum")}</Text>
-                  <Text style={{ fontSize: 10.5, color: C.faint }}>{t("Oyuncu ilanını paylaş, teklifler gelsin")}</Text>
+                  <Text style={{ fontSize: 14, fontWeight: "900", color: "#fff" }}>{t("Oyuncuyum, takım arıyorum")}</Text>
+                  <Text style={{ fontSize: 11, color: C.mist }}>{t("Oyuncu ilanını paylaş, teklifler gelsin")}</Text>
                 </View>
+                <Ionicons name="chevron-forward" size={16} color="#fff" />
               </TouchableOpacity>
             )}
           </View>
         }
         ListEmptyComponent={loading ? null :
           <View>
+          {sponsors.filter((x) => x && x.active !== false).slice(0, 1).map((x) => (
+            <SponsorCard key={x.id} s={x} compact onPress={() => onSponsor(x)} />
+          ))}
           <View style={st.empty}>
             <Text style={{ fontWeight: "800", color: C.ink }}>
               {kind === "pazar" ? t("Takım arayan oyuncu yok") : kind === "rakip" ? "Rakip arayan takım yok" : district === "Tümü" ? `${user.city}'da henüz açık talep yok` : `${district}'da açık talep yok`}
