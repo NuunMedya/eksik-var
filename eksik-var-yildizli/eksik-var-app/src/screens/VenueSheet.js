@@ -209,26 +209,6 @@ export default function VenueSheet({ cat = null, onCat = null, visible, onClose,
           ))}
         </MapView>
 
-        {/* elle yazma kapısı (yalnız seçici modda) */}
-        {onPick && (
-          <TouchableOpacity onPress={() => {
-            Alert.prompt && Alert.prompt("✍️ " + t("Saha adını yaz"),
-              t("Haritada bulamadıysan adıyla kaydet — konumu daha sonra uzun-basışla iğnelenebilir."), [
-              { text: t("Vazgeç"), style: "cancel" },
-              { text: t("Kaydet ve seç"), onPress: async (ad) => {
-                const isim = (ad || "").trim(); if (isim.length < 3) return;
-                try {
-                  const v = onAdd ? await onAdd(isim, null, null) : { name: isim };
-                  onPick({ name: (v && v.name) || isim, lat: v && isFinite(Number(v.lat)) ? Number(v.lat) : null, lng: v && isFinite(Number(v.lng)) ? Number(v.lng) : null, venueId: (v && v.id) || null });
-                  onClose();
-                } catch (e) { Alert.alert("📍 " + t("Saha eklenemedi"), (e && e.message) || ""); }
-              } },
-            ], "plain-text");
-          }} style={st.elleBar}>
-            <Text style={{ fontSize: 12.5, fontWeight: "800", color: C.turfText }}>{t("Sahayı bulamadın mı?")} <Text style={{ fontWeight: "900" }}>✍️ {t("Adını elle yaz")}</Text></Text>
-          </TouchableOpacity>
-        )}
-
         {/* konum düğmesi */}
         <TouchableOpacity onPress={konumaGit} style={st.konumBtn}>
           <Ionicons name="locate" size={22} color={C.pitchDark} />
@@ -284,7 +264,6 @@ const mkSt = () => StyleSheet.create({
   aramaKutu: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: C.surface, marginHorizontal: 12, marginTop: -0.5, borderRadius: 0, borderBottomLeftRadius: 14, borderBottomRightRadius: 14, paddingHorizontal: 12, borderWidth: 1, borderTopWidth: 0, borderColor: C.line },
   pin: { backgroundColor: C.surface, borderRadius: 999, borderWidth: 3, borderColor: C.pitch, padding: 7, shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 5 },
   pinSecili: { borderColor: C.kit, backgroundColor: "#FFF3E8" },
-  elleBar: { position: "absolute", left: 12, right: 72, bottom: 130, backgroundColor: C.surface, borderRadius: 12, borderWidth: 1, borderColor: C.line, paddingHorizontal: 12, paddingVertical: 10, shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 3 },
   konumBtn: { position: "absolute", right: 14, bottom: 130, width: 46, height: 46, borderRadius: 23, backgroundColor: "#fff", alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 4 },
   altKart: { position: "absolute", left: 12, right: 12, bottom: 24, backgroundColor: C.surface, borderRadius: 20, padding: 14, shadowColor: "#000", shadowOpacity: 0.16, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
   kartIkon: { width: 44, height: 44, borderRadius: 14, backgroundColor: C.pitchSoft, alignItems: "center", justifyContent: "center" },

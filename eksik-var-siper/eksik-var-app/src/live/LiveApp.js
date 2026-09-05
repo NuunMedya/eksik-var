@@ -185,19 +185,7 @@ export default function LiveApp() {
     const [rows, tk] = await Promise.all([api.listClub(user.city), api.myTeam(meId)]);
     setClubRows(rows); setMyTeamRow(tk);
   } catch { /* sessiz */ } };
-  const [favSahalar, setFavSahalar] = useState([]);
-  const favYenile = () => api.listSavedVenues(meId).then(setFavSahalar).catch(() => {});
-  useEffect(() => { favYenile(); }, []);
-  const favDegistir = async (v, kat, kayitli) => {
-    try { await api.toggleSavedVenue(meId, v, kat, kayitli); favYenile(); showToast(kayitli ? t("Favorilerden çıktı") : t("⭐ Favorilere eklendi")); }
-    catch (e) { fail(e); }
-  };
   const [teklifKisi, setTeklifKisi] = useState(null);
-  useEffect(() => {
-    if (view.name === "chat" && chats.length > 0 && !chats.some((c) => String(c.id) === String(view.id))) {
-      setView({ name: "root" });
-    }
-  }, [view, chats]);
   const teklifGonder = (p) => setTeklifKisi(p);
   const teklifYolla = async (metin) => {
     const p = teklifKisi; setTeklifKisi(null);
@@ -840,6 +828,11 @@ export default function LiveApp() {
     );
 
   const activeChat = view.name === "chat" ? chats.find((c) => String(c.id) === String(view.id)) : null;
+  useEffect(() => {
+    if (view.name === "chat" && chats.length > 0 && !chats.some((c) => String(c.id) === String(view.id))) {
+      setView({ name: "root" });
+    }
+  }, [view, chats]);
   const infoChat = view.name === "groupInfo" ? chats.find((c) => String(c.id) === String(view.id)) : null;
   infoChatRef.current = infoChat;
   const activeEvent = view.name === "event" ? events.find((e) => e.id === view.id) : null;
@@ -1068,7 +1061,6 @@ export default function LiveApp() {
             categoryName={(CATEGORIES.find((c) => c.id === hubCat) || {}).name || ""}
             onList={(q) => api.listVenues(user.city, hubCat, q)}
             onAdd={(name, lat, lng) => api.addVenue(meId, user.city, hubCat, name, lat, lng)}
-            favoriler={favSahalar} onFav={favDegistir}
             onPick={(v) => { setVenueHub(false); yolSec(v.name, v.lat, v.lng, `${v.name} ${user.city}`); }} />
           {teamKur && (
             <TeamKurModal onClose={() => setTeamKur(null)}

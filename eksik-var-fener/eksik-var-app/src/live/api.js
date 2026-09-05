@@ -1002,19 +1002,6 @@ export async function playerTotals(userId) {
 export async function openCheckinCode(eventId) { const { data, error } = await supabase.rpc("open_checkin_code", { p_event: eventId }); if (error) throw error; return data; }
 export async function checkInWithCode(eventId, code) { const { error } = await supabase.rpc("check_in_with_code", { p_event: eventId, p_code: code }); if (error) throw error; }
 export async function listSavedVenues(uid) {
-  const { data } = await supabase.from("saved_venues")
-    .select("name, venue_id, lat, lng, category_id, used_count")
-    .eq("user_id", uid).order("used_count", { ascending: false }).limit(8);
-  return (data || []).map((v) => ({ ...v, lat: Number(v.lat), lng: Number(v.lng) }));
-}
-export async function toggleSavedVenue(uid, v, categoryId, kayitli) {
-  if (kayitli) {
-    const { error } = await supabase.from("saved_venues").delete().eq("user_id", uid).eq("name", v.name);
-    if (error) throw error; return false;
-  }
-  const { error } = await supabase.from("saved_venues").upsert({
-    user_id: uid, name: v.name, venue_id: v.venueId || v.id || null,
-    lat: v.lat ?? null, lng: v.lng ?? null, category_id: categoryId || null,
-  }, { onConflict: "user_id,name" });
-  if (error) throw error; return true;
+  const { data } = await supabase.from("saved_venues").select("name, price, used_count, districts(name)").eq("user_id", uid).order("used_count", { ascending: false }).limit(8);
+  return (data || []).map((v) => ({ name: v.name, price: v.price, used: v.used_count, district: v.districts ? v.districts.name : null }));
 }
