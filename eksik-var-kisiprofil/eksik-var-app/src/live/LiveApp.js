@@ -17,7 +17,6 @@ import { Linking, Modal } from "react-native";
 import { t, onLangChange } from "../i18n";
 import { saveTheme, saveLang } from "../prefs";
 import { Toast, PickerSheet } from "../components";
-import { OfferSheet } from "../screens/sheets";
 import { Alert } from "react-native";
 import * as api from "./api";
 import { DEFAULT_SPONSORS } from "../sponsors";
@@ -185,15 +184,16 @@ export default function LiveApp() {
     const [rows, tk] = await Promise.all([api.listClub(user.city), api.myTeam(meId)]);
     setClubRows(rows); setMyTeamRow(tk);
   } catch { /* sessiz */ } };
-  const [teklifKisi, setTeklifKisi] = useState(null);
-  const teklifGonder = (p) => setTeklifKisi(p);
-  const teklifYolla = async (metin) => {
-    const p = teklifKisi; setTeklifKisi(null);
-    if (!p) return;
-    try {
-      await api.createOffer(meId, { kind: "oyuncu", toUser: p.userId, message: metin });
-      showToast(t("💌 {p0}'a davet gönderildi — Tekliflerim'den takip et", { p0: (p.name || "").split(" ")[0] }));
-    } catch (e) { fail(e); }
+  const teklifGonder = (p) => {
+    const ad = (p.name || "").split(" ")[0];
+    Alert.alert("💌 " + t("{p0} için oyuncu teklifi", { p0: ad }),
+      t("{p0}'ı takımında oynamaya davet ediyorsun. Teklif, Teklifler kutusuna düşer; kabul ederse aranızda sohbet açılır.", { p0: ad }), [
+      { text: t("Vazgeç"), style: "cancel" },
+      { text: t("Teklifi gönder"), onPress: async () => { try {
+        await api.createOffer(meId, { kind: "oyuncu", toUser: p.userId, message: t("💌 Merhaba {p0}! Vitrinini beğendik, takımımızda oynamanı isteriz.", { p0: ad }) });
+        showToast(t("💌 {p0}'a oyuncu teklifi gönderildi — Tekliflerim'den takip et", { p0: ad }));
+      } catch (e) { fail(e); } } },
+    ]);
   };
   const takimDaveti = async (kisi, tk) => { try {
     await api.createOffer(meId, { kind: "takim", toUser: kisi.id, teamId: tk.id, message: t("🏆 {p0} seni kadrosuna davet ediyor!", { p0: tk.name }) });
@@ -940,15 +940,7 @@ export default function LiveApp() {
             onAddGuest={async (ad) => { try { await api.updateTeam(myTeamRow.id, { misafirler: [...(myTeamRow.misafirler || []), ad] }); await refreshTakim(); } catch (e) { fail(e); } }}
             onRemoveGuest={async (i) => { try { const y = [...(myTeamRow.misafirler || [])]; y.splice(i, 1); await api.updateTeam(myTeamRow.id, { misafirler: y }); await refreshTakim(); } catch (e) { fail(e); } }} />}
           {view.name === "teklifler" && <OffersScreen offers={offers} onBack={() => setView({ name: "hub" })}
-            onDecide={async (id, st2, karsi) => { try {
-              await api.decideOffer(id, st2); await refreshOffers();
-              if (st2 === "kabul" && karsi) {
-                const conv = await api.openDirectChat(meId, karsi);
-                await api.sendMessage(meId, conv.id, t("✅ Davetini kabul ettim — detayları konuşalım!"));
-                await refreshChats();
-                showToast(t("✅ Kabul edildi — sohbet açıldı, Sohbet sekmesinde"));
-              } else if (st2 === "kabul") showToast(t("Kadroya işlendi ✅"));
-            } catch (e) { fail(e); } }}
+            onDecide={async (id, st2) => { try { await api.decideOffer(id, st2); await refreshOffers(); if (st2 === "kabul") showToast(t("Kadroya işlendi ✅")); } catch (e) { fail(e); } }}
             onCancel={async (id) => { try { await api.decideOffer(id, "iptal"); await refreshOffers(); } catch (e) { fail(e); } }}
             onOpenUser={(id, name) => openProfile({ id, name })} />}
           {view.name === "kulup" && <ClubBoardScreen rows={clubRows} meId={meId} myTeam={myTeamRow}
@@ -1029,7 +1021,6 @@ export default function LiveApp() {
                 onMute={muteChat} season={seasons[infoChat.id] || null} />
             </View>
           )}
-          <OfferSheet visible={!!teklifKisi} kisi={teklifKisi} onClose={() => setTeklifKisi(null)} onSend={teklifYolla} />
           {call && (<Modal visible animationType="fade" onRequestClose={() => {}}><CallScreen call={call} onEnd={endCall} onAnswer={call.status === "gelen" ? async () => { try { await api.answerCall(call.callId); setCall((c) => c && { ...c, status: "bağlandı" }); } catch (e) { fail(e); } } : null} /></Modal>)}
 
           {memberSheet && (

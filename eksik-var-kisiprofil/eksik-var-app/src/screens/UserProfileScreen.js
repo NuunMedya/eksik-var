@@ -87,10 +87,17 @@ export default function UserProfileScreen({ user, comments = [], rules, blocked 
         {rules && (!rules.canMessage || !rules.canCall) && (
           <Text style={st.reason}>{rules.messageReason || rules.callReason}</Text>
         )}
-        {onInvite && !user.isMe && !blocked && (
-          <TouchableOpacity onPress={() => onInvite(user)} style={[st.btn, { backgroundColor: C.kitSoft, marginHorizontal: 18, marginTop: 10 }]}>
+        {(onInvite || onTeamInvite) && !user.isMe && !blocked && (
+          <TouchableOpacity onPress={() => {
+            const secenek = [];
+            if (onInvite) secenek.push({ text: "\u26BD " + t("Maç kadrosuna çağır"), onPress: () => onInvite(user) });
+            if (onTeamInvite) secenek.push({ text: "\u{1F3C6} " + t("Takımına kat (kalıcı)"), onPress: () => onTeamInvite(user) });
+            secenek.push({ text: t("Vazgeç"), style: "cancel" });
+            Alert.alert(t("{p0} nereye davet edilsin?", { p0: (user.name || "").split(" ")[0] }),
+              t("Maç daveti tek maçlıktır; takım daveti kalıcı kadroya katar."), secenek);
+          }} style={[st.btn, { backgroundColor: C.kitSoft, marginHorizontal: 18, marginTop: 10 }]}>
             <Ionicons name="person-add-outline" size={17} color={C.kit} />
-            <Text style={[st.btnText, { color: C.kit }]}>{"\u26BD "}{t("Maç kadrosuna çağır")}</Text>
+            <Text style={[st.btnText, { color: C.kit }]}>{t("Davet et")}</Text>
           </TouchableOpacity>
         )}
 

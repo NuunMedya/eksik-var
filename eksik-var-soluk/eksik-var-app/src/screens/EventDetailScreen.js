@@ -90,7 +90,7 @@ export default function EventDetailScreen({ onUpdateDesc = null, onUpdateNeeds =
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 190 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 140 }}>
         <View style={{ flexDirection: "row", backgroundColor: C.surface, borderRadius: 16, borderWidth: 1, borderColor: C.line, paddingVertical: 12, alignItems: "stretch" }}>
           {(rakip ? [
             ["calendar-outline", ev.date],
@@ -958,8 +958,8 @@ const mkSt = () => StyleSheet.create({
   },
   bottomBar: {
     position: "absolute", bottom: 0, left: 0, right: 0,
-    backgroundColor: "transparent", padding: 14, paddingBottom: 96, },
-  cta: { borderRadius: 16, alignItems: "center", paddingVertical: 15, shadowColor: "#000", shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 4 },
+    backgroundColor: C.surface, borderTopWidth: 1, borderTopColor: C.line, padding: 14, paddingBottom: 108, },
+  cta: { borderRadius: 16, alignItems: "center", paddingVertical: 15 },
   ctaText: { color: "#fff", fontWeight: "900", fontSize: 14 },
 });
 let st = mkSt();
