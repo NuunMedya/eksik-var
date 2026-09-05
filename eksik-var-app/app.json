@@ -22,7 +22,8 @@
     },
     "plugins": [
       "expo-status-bar",
-      "expo-audio"
+      "expo-audio",
+      "expo-sharing"
     ]
   }
 }
