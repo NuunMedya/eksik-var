@@ -1,0 +1,14 @@
+EKSIKVAR.APP SITESI (derleme gerektirmez)
+
+Yayinlama: Cloudflare Pages (onerilen) -> "Upload assets" ile bu klasoru surukle-birak, ya da GitHub deposuna
+baglayip kok dizin olarak "site" sec. Alan adini Cloudflare'de baglayinca HTTPS otomatik gelir (.app icin sart).
+Netlify de ayni sekilde calisir (_redirects dosyasini tanir). GitHub Pages: /e/<id> icin 404.html = e/index.html kopyasi gerekir.
+
+Sayfalar: /  (tanitim)   /gizlilik  /kvkk  /kullanim-sartlari   /e/<id> (uygulamayi ac / magazaya git)
+Magaza dugmeleri "Yakinda": yayinda App Store / Google Play linkleri ve resmi rozetlerle degistirilecek.
+
+Universal / App Links (uygulama yayinlandiginda):
+  .well-known/apple-app-site-association -> TEAMID ve bundle id (app.json ios.bundleIdentifier) yazilir
+  .well-known/assetlinks.json -> Android paket adi ve imza SHA256 parmak izi yazilir
+  app.json'a: "scheme": "eksikvar", "ios": {"associatedDomains": ["applinks:eksikvar.app"]},
+              "android": {"intentFilters": [{"action":"VIEW","autoVerify":true,"data":[{"scheme":"https","host":"eksikvar.app","pathPrefix":"/e"}],"category":["BROWSABLE","DEFAULT"]}]}

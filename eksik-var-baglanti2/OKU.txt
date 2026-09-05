@@ -1,0 +1,11 @@
+EKSIK VAR - BAGLANTI 2 PAKETI
+
+eksik-var-app/App.js, src/ -> eksik-var-app icine (ustune yaz)
+1-veritabani/supabase_kurulum.sql -> aksam yuklenecek TEK dosya (43 senaryo test edildi)
+1-veritabani/test/ -> yerel test seti (sh calistir.sh)
+
+Canli modda artik calisan: engelleme/engel kaldirma (blocks), sikayet (reports), takim puanlama (ratings ->
+ortalama trigger'la), etkinlik duzenleme (+ gruba duyuru), iptal (cancel_event: gec iptal kurali, bildirimler),
+kadrodan ayrilma (leave_event: gec ayrilma kurali, seri grubunda uyelik korunur, yeniden basvurabilir),
+Maclarim, bekleyen puanlama karti, derin baglanti.
+Kalan (Baglanti 3): push bildirimleri, sunucu tarafli bildirim uretimi (basvuru/onay/mesaj), gercek sesli arama.

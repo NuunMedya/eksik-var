@@ -1,0 +1,10 @@
+EKSIK VAR - PROFIL FOTOGRAFI PAKETI
+
+ONCE (bir kez, eksik-var-app klasorunde):  npx expo install expo-image-picker
+Sonra: App.js, src/*.js, src/screens/*.js -> eksik-var-app icine (ustune yaz)
+  YENI: src/avatar.js (kamera/galeri secimi, kare kirpma, izin yonetimi)
+
+Profil ve kayit ekraninda avatara dokun -> Fotograf cek / Galeriden sec / Kaldir.
+Fotograf: profil, grup uyeleri, uye karti ve arama ekraninda gorunur.
+Supabase baglaninca fotograflar Storage'a (avatars klasoru) yuklenip users.avatar_url'e yazilacak;
+su an uygulama icinde tutuluyor.

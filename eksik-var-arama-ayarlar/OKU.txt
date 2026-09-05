@@ -1,0 +1,15 @@
+EKSIK VAR - ARAMA + ILETISIM AYARLARI PAKETI
+
+App.js           -> eksik-var-app/ icine (ustune yaz)
+src/data.js      -> eksik-var-app/src/ icine (ustune yaz)
+src/screens/     -> eksik-var-app/src/screens/ icine (hepsi, ustune yaz)
+                    YENI: SettingsScreen.js (Ayarlar), CallScreen.js (arama ekrani)
+assets/          -> eksik-var-app/assets/ icine (logo dosyalari; giris ekrani logo-mark.png ister)
+1-veritabani/    -> 2-iletisim-ayarlari.sql: Supabase asamasinda ana semadan SONRA calistirilir
+
+Yeni ozellikler:
+- Birebir sohbette arama tusu (uygulama ici arama ekrani, numaralar gizli)
+- Profil > Ayarlar: Mesaj ve arama / Yalnizca mesaj / Yalnizca arama
+- Kimler ulasabilir: Herkes / Sadece kadromdakiler (basvuru sohbetleri her zaman acik)
+- Sessiz saatler, bildirim tercihleri, engellenenler
+- Ayni kurallar veritabaninda can_call / can_message fonksiyonlariyla da uygulanir

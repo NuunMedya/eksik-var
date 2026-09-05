@@ -1,0 +1,8 @@
+EKSIK VAR - IBAN KOPYALA PAKETI (sadece uygulama; yeni paket: expo-clipboard)
+
+ONCE:  cd ~/Desktop/eksik-var/eksik-var-app && npx expo install expo-clipboard
+Sonra: eksik-var-app/App.js, src/ -> eksik-var-app icine (ustune yaz)
+
+- Gruba dusen IBAN mesaji artik kart olarak gorunur: ucret, ad, IBAN (4'lu gruplu, secilebilir) ve "IBAN'i kopyala".
+- Etkinlikteki odeme kartinda oyuncu icin "IBAN'i kopyala" (gruptaki son IBAN mesajindan) + "Odedim".
+- Sistem mesajlari artik secilebilir (kopyalanabilir).

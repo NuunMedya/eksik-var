@@ -1,0 +1,100 @@
+import React from "react";
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { C } from "../theme";
+import { MY_COMMENTS, initials } from "../data";
+import { Stars } from "../components";
+
+export default function ProfileScreen({ user, pendingRate, onRate, onLogout }) {
+  return (
+    <ScrollView style={{ flex: 1, backgroundColor: C.chalk }} contentContainerStyle={{ paddingBottom: 120 }}>
+      <View style={st.header}>
+        <View style={st.avatar}>
+          <Text style={{ color: "#fff", fontWeight: "900", fontSize: 24 }}>{initials(user.name)}</Text>
+        </View>
+        <Text style={{ color: "#fff", fontWeight: "900", fontSize: 19 }}>{user.name}</Text>
+        <Text style={{ color: C.mist, fontSize: 13 }}>
+          @{user.username} · {user.city}
+        </Text>
+      </View>
+
+      <View style={st.statsRow}>
+        {[
+          { top: `★ ${user.rating}`, label: "Puan", sub: `${user.count} değerlendirme` },
+          { top: `%${user.rel}`, label: "Güvenilirlik", sub: "katılım oranı" },
+          { top: String(user.joined), label: "Katılım", sub: `${user.organized} organizasyon` },
+        ].map((s, i) => (
+          <View key={i} style={st.statBox}>
+            <Text style={{ fontSize: 17, fontWeight: "900", color: C.turf }}>{s.top}</Text>
+            <Text style={{ fontSize: 12, fontWeight: "800", color: C.ink }}>{s.label}</Text>
+            <Text style={{ fontSize: 10, color: C.faint, textAlign: "center" }}>{s.sub}</Text>
+          </View>
+        ))}
+      </View>
+
+      {pendingRate && (
+        <View style={st.pending}>
+          <Text style={{ fontWeight: "900", fontSize: 13, color: C.ink }}>⭐ Bekleyen puanlama</Text>
+          <Text style={{ fontSize: 13, color: C.faint, marginTop: 4, lineHeight: 19 }}>
+            "Cuma Halı Saha" tamamlandı — Zeynep Arslan'ı puanla, topluluk puanları herkes için işlesin.
+          </Text>
+          <TouchableOpacity onPress={onRate} style={st.rateBtn}>
+            <Text style={{ color: "#fff", fontWeight: "900", fontSize: 13 }}>Şimdi puanla</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      <View style={st.card}>
+        <Text style={st.cardTitle}>HAKKINDA SÖYLENENLER</Text>
+        {MY_COMMENTS.map((c, i) => (
+          <View
+            key={i}
+            style={[st.comment, i === MY_COMMENTS.length - 1 && { borderBottomWidth: 0, paddingBottom: 0 }]}
+          >
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={{ fontWeight: "800", fontSize: 13, color: C.ink }}>{c.from}</Text>
+              <Stars value={c.stars} size={11} />
+            </View>
+            <Text style={{ fontSize: 13, color: C.faint, marginTop: 3 }}>"{c.text}"</Text>
+          </View>
+        ))}
+      </View>
+
+      <TouchableOpacity onPress={onLogout} style={st.logout}>
+        <Ionicons name="log-out-outline" size={16} color={C.danger} />
+        <Text style={{ color: C.danger, fontWeight: "800", fontSize: 13 }}>Çıkış yap</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+}
+
+const st = StyleSheet.create({
+  header: { backgroundColor: C.turf, alignItems: "center", paddingTop: 22, paddingBottom: 30 },
+  avatar: {
+    width: 76, height: 76, borderRadius: 38,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center", justifyContent: "center", marginBottom: 8,
+  },
+  statsRow: { flexDirection: "row", gap: 8, paddingHorizontal: 18, marginTop: -16 },
+  statBox: {
+    flex: 1, backgroundColor: "#fff", borderRadius: 16, paddingVertical: 12,
+    alignItems: "center", elevation: 2,
+    shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 2 },
+  },
+  pending: {
+    marginHorizontal: 18, marginTop: 14, borderRadius: 16, padding: 14,
+    borderWidth: 2, borderColor: C.star, backgroundColor: "#FFFBEF",
+  },
+  rateBtn: {
+    backgroundColor: C.turf, borderRadius: 12, alignItems: "center",
+    paddingVertical: 10, marginTop: 10,
+  },
+  card: { backgroundColor: "#fff", borderRadius: 16, padding: 14, marginHorizontal: 18, marginTop: 14 },
+  cardTitle: { fontSize: 11, fontWeight: "900", letterSpacing: 0.8, color: C.turf, marginBottom: 4 },
+  comment: { borderBottomWidth: 1, borderBottomColor: C.line, paddingVertical: 10 },
+  logout: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+    backgroundColor: "#fff", borderWidth: 1, borderColor: C.line, borderRadius: 16,
+    paddingVertical: 12, marginHorizontal: 18, marginTop: 14,
+  },
+});

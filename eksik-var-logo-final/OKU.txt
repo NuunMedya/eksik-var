@@ -1,0 +1,10 @@
+EKSIK VAR - NIHAI LOGO PAKETI (F3 "Balonda blok", Montserrat 800)
+
+assets/        -> Uygulama ikon seti. eksik-var-app/assets/ icine kopyalanir (ustune yaz).
+src/screens/   -> AuthScreen.js: giris ekraninda yeni logo. eksik-var-app/src/screens/ icine.
+paylasim/      -> WhatsApp / sosyal medya gorselleri (projeye kopyalanmaz):
+                  logo-kare-koyu.png  : grup profil fotografi
+                  logo-yatay-acik.png : acik zeminli yatay logo
+                  logo-yatay-koyu.png : koyu zeminli yatay logo
+
+Marka: cim yesili #0B3D2E, forma turuncusu #F4600C, tebesir #F7F6F2, font Montserrat 800

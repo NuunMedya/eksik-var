@@ -1,0 +1,9 @@
+EKSIK VAR - YEDEK LISTESI PAKETI
+
+eksik-var-app/App.js, src/ -> eksik-var-app icine (ustune yaz)
+1-veritabani/supabase_kurulum.sql -> TEK dosya (67 senaryo). Zaten yuklediyseniz yalnizca 12-yedek.sql'i calistirin.
+
+Kadro (ya da mevki) doluyken "Yedek ol" (mevki tercihli, sohbet acilmaz). Yer acilinca (ayrilma, cikarilma,
+kontenjan artisi) siradaki uygun yedege 2 saatlik teklif: sohbet + bildirim + etkinlikte "kabul et";
+teklif suresince yer rezervedir, sure dolarsa sira sonrakine gecer (pg_cron, 10 dk). Etkinlik detayinda
+yedek sayisi; organizator listeyi gorur. Demo: dolu bir macta yedek ol, 6 sn sonra "yer acildi" teklifi gelir.

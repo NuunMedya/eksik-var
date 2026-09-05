@@ -1,0 +1,9 @@
+EKSIK VAR - TURKIYE CAPI IL/ILCE PAKETI
+
+App.js, src/*.js, src/screens/*.js -> eksik-var-app icine (ustune yaz)
+  YENI: src/trIlIlce.js (81 il, 973 ilce - 2025 verisi, il kimligi = plaka)
+1-veritabani/ -> aksam icin guncel kurulum dosyasi (il/ilce dahil). Simdi bir sey yapilmayacak.
+
+Akis: kayitta il (+istege bagli ilce) arama kutulu seciciden secilir; ana sayfada o ilin ilceleri
+etkinlik sayisina gore sirali cipler halinde (cipte sayi yazar); sag ustten il degistirilebilir;
+etkinlik acarken il + ilce zorunlu; kartlarda/detayda ilce gorunur.

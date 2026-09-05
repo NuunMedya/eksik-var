@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eksik Var — Kadronda eksik mi var?</title>
+<meta name="description" content="Halı sahadan voleybola: eksik oyuncunu bul, rakip takım bul, kurayı çek. Eksik Var — mahalle maçının uygulaması.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,400;0,600;0,800;1,800;1,900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --saha:#123B26;       /* koyu saha yeşili */
+    --cim:#17994F;        /* çim */
+    --kirec:#F1EFE6;      /* kireç / zemin */
+    --forma:#E8641B;      /* forma turuncusu */
+    --murekkep:#10231A;   /* metin */
+    --sis:#9DBBAA;        /* saha üstü soluk metin */
+    --cizgi:rgba(241,239,230,.5);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:'Archivo',system-ui,sans-serif;background:var(--kirec);color:var(--murekkep);line-height:1.55}
+  a{color:inherit}
+  .dis{max-width:1040px;margin:0 auto;padding:0 20px}
+
+  /* ---------- üst çubuk ---------- */
+  header{position:absolute;top:0;left:0;right:0;z-index:5}
+  .nav{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
+  .marka{font-weight:900;font-style:italic;font-size:1.35rem;letter-spacing:-.02em;color:var(--kirec);text-decoration:none}
+  .marka em{color:var(--forma);font-style:italic}
+  .nav a.indir{background:var(--forma);color:#fff;text-decoration:none;font-weight:800;padding:10px 18px;border-radius:999px;font-size:.95rem}
+  .nav a.indir:focus-visible,.cta:focus-visible{outline:3px solid var(--forma);outline-offset:3px}
+
+  /* ---------- kahraman: sahanın kendisi ---------- */
+  .saha{position:relative;background:var(--saha);color:var(--kirec);overflow:hidden;
+    background-image:repeating-linear-gradient(90deg, rgba(255,255,255,.035) 0 120px, rgba(0,0,0,.05) 120px 240px)}
+  .saha::before{ /* orta çizgi */
+    content:"";position:absolute;left:0;right:0;top:50%;height:2px;background:var(--cizgi)}
+  .yuva{ /* orta yuvarlak */
+    position:relative;margin:0 auto;max-width:820px;min-height:100svh;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:110px 24px 90px}
+  .yuva::before{content:"";position:absolute;inset:auto;width:min(78vw,560px);aspect-ratio:1;
+    border:2px solid var(--cizgi);border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%)}
+  .yuva h1{position:relative;font-size:clamp(2.5rem,7.5vw,4.6rem);font-weight:900;font-style:italic;line-height:1.04;letter-spacing:-.025em}
+  .yuva .alt{position:relative;margin-top:18px;font-size:clamp(1.02rem,2.4vw,1.25rem);color:var(--sis);max-width:34ch}
+  .cta{position:relative;display:inline-block;margin-top:34px;background:var(--forma);color:#fff;text-decoration:none;
+    font-weight:800;font-size:1.1rem;padding:16px 34px;border-radius:999px;box-shadow:0 8px 0 rgba(0,0,0,.28)}
+  .cta:active{transform:translateY(3px);box-shadow:0 5px 0 rgba(0,0,0,.28)}
+  .magaza{position:relative;margin-top:16px;font-size:.86rem;color:var(--sis)}
+  .kose{ /* köşe yayları */
+    position:absolute;width:90px;height:90px;border:2px solid var(--cizgi);border-radius:50%}
+  .kose.sol-ust{top:-45px;left:-45px}.kose.sag-ust{top:-45px;right:-45px}
+  .kose.sol-alt{bottom:-45px;left:-45px}.kose.sag-alt{bottom:-45px;right:-45px}
+
+  /* ---------- bölüm iskeleti ---------- */
+  section{padding:72px 0}
+  h2{font-size:clamp(1.7rem,4.2vw,2.5rem);font-weight:900;font-style:italic;letter-spacing:-.02em;line-height:1.1;max-width:22ch}
+  .giris{margin-top:12px;color:#4A5C52;max-width:58ch}
+
+  /* ---------- nasıl çalışır (gerçek sıra → numaralı) ---------- */
+  .adimlar{margin-top:40px;display:grid;gap:0;border-top:2px solid var(--murekkep)}
+  .adim{display:grid;grid-template-columns:84px 1fr;gap:18px;padding:26px 0;border-bottom:2px solid var(--murekkep);align-items:start}
+  .adim .no{font-weight:900;font-style:italic;font-size:2.6rem;line-height:1;color:var(--cim)}
+  .adim h3{font-size:1.2rem;font-weight:800;margin-bottom:6px}
+  .adim p{color:#4A5C52;max-width:52ch}
+
+  /* ---------- maç kâğıdı: özellikler ---------- */
+  .kagit{background:#fff;border:2px solid var(--murekkep);border-radius:22px;margin-top:40px;overflow:hidden}
+  .kagit-baslik{background:var(--saha);color:var(--kirec);padding:14px 22px;font-weight:800;font-style:italic;display:flex;justify-content:space-between;align-items:center}
+  .kagit-baslik span:last-child{color:var(--forma)}
+  .ozellik{display:grid;grid-template-columns:58px 1fr;gap:16px;align-items:center;padding:18px 22px;border-top:1.5px solid #E5E1D4}
+  .ozellik:first-of-type{border-top:0}
+  .ozellik .ikon{font-size:1.9rem;text-align:center}
+  .ozellik h3{font-size:1.06rem;font-weight:800}
+  .ozellik p{color:#4A5C52;font-size:.95rem;max-width:56ch}
+
+  /* ---------- branş şeridi ---------- */
+  .branslar{background:var(--saha);color:var(--kirec)}
+  .branslar h2{color:var(--kirec)}
+  .branslar .giris{color:var(--sis)}
+  .brans-sira{margin-top:36px;display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .brans{border:2px solid var(--cizgi);border-radius:18px;padding:22px 12px;text-align:center}
+  .brans .top{font-size:2.4rem;display:block}
+  .brans b{display:block;margin-top:8px;font-weight:800}
+  .brans small{color:var(--sis)}
+
+  /* ---------- kura vurgusu ---------- */
+  .kura .vs{display:flex;align-items:center;gap:14px;margin-top:34px;flex-wrap:wrap}
+  .takim{flex:1;min-width:220px;border:2px solid;border-radius:18px;padding:18px}
+  .takim.yesil{border-color:var(--cim);background:#E7F4EC}
+  .takim.turuncu{border-color:var(--forma);background:#FCEDE2}
+  .takim b{font-style:italic;font-weight:900}
+  .takim ul{list-style:none;margin-top:10px;display:grid;gap:6px;font-size:.95rem}
+  .vs-rozet{background:var(--murekkep);color:#fff;font-weight:900;font-style:italic;border-radius:999px;padding:10px 16px}
+
+  /* ---------- kapanış CTA ---------- */
+  .kapanis{background:var(--forma);color:#fff;text-align:center}
+  .kapanis h2{color:#fff;margin:0 auto}
+  .kapanis .cta{background:var(--murekkep);margin-top:26px;box-shadow:0 8px 0 rgba(0,0,0,.3)}
+  .kapanis .magaza{color:#FFE3CF}
+
+  footer{padding:34px 0 44px;font-size:.92rem;color:#4A5C52}
+  footer .dis{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+  footer a{text-decoration:underline;text-underline-offset:3px}
+
+  @media (max-width:640px){
+    .adim{grid-template-columns:56px 1fr}
+    .adim .no{font-size:2rem}
+    .brans-sira{grid-template-columns:repeat(2,1fr)}
+    .yuva{min-height:92svh}
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .yuva h1,.yuva .alt,.yuva .cta,.yuva .magaza{animation:dus .7s ease both}
+    .yuva .alt{animation-delay:.12s}.yuva .cta{animation-delay:.24s}.yuva .magaza{animation-delay:.3s}
+    @keyframes dus{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="dis nav">
+    <a class="marka" href="#">EKSİK <em>VAR</em></a>
+    <a class="indir" href="#indir">Uygulamayı edin</a>
+  </div>
+</header>
+
+<!-- KAHRAMAN: sahanın ta kendisi -->
+<div class="saha">
+  <div class="yuva">
+    <span class="kose sol-ust" aria-hidden="true"></span>
+    <span class="kose sag-ust" aria-hidden="true"></span>
+    <h1>Kadronda<br>eksik mi var?</h1>
+    <p class="alt">Halı sahadan voleybola: eksik oyuncunu bul, takımına rakip bul, kurayı çek — maç asla iptal olmasın.</p>
+    <a class="cta" href="#indir">Eksiğini tamamla</a>
+    <p class="magaza">Yakında App Store ve Google Play'de · şimdilik davetli beta</p>
+    <span class="kose sol-alt" aria-hidden="true"></span>
+    <span class="kose sag-alt" aria-hidden="true"></span>
+  </div>
+</div>
+
+<!-- NASIL ÇALIŞIR -->
+<section id="nasil">
+  <div class="dis">
+    <h2>Maç kurmak üç dakika sürer</h2>
+    <p class="giris">Telefon numaranla girersin, gerisini uygulama toparlar.</p>
+    <div class="adimlar">
+      <div class="adim">
+        <div class="no">1</div>
+        <div>
+          <h3>İlanını aç</h3>
+          <p>Gün, saat, saha ve kaç kişi eksik olduğunu yaz. "Her Perşembe" dersen ilan her hafta kendi kendine yenilenir.</p>
+        </div>
+      </div>
+      <div class="adim">
+        <div class="no">2</div>
+        <div>
+          <h3>Başvuranları seç</h3>
+          <p>Gelen oyuncuların puanını, mevkisini ve katılım geçmişini görürsün. Kabul ettiğin anda kadroya işlenir, sohbet açılır.</p>
+        </div>
+      </div>
+      <div class="adim">
+        <div class="no">3</div>
+        <div>
+          <h3>Sahaya çık</h3>
+          <p>Yoklama, ödeme takibi ve maç sonu puanlama uygulamada. Skoru gir, en iyi oyuncuyu seç, seri devam etsin.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MAÇ KÂĞIDI: özellikler -->
+<section id="ozellikler" style="padding-top:0">
+  <div class="dis">
+    <h2>Sahada ne varsa, cebinde de var</h2>
+    <div class="kagit">
+      <div class="kagit-baslik"><span>MAÇ KÂĞIDI</span><span>EKSİK: 0</span></div>
+      <div class="ozellik">
+        <div class="ikon">🧤</div>
+        <div><h3>Oyuncu bul</h3><p>"2 eksik" de, mevki belirt; çevredeki uygun oyuncular başvursun. Uygulaması olmayan arkadaşını da adıyla kadroya yazarsın.</p></div>
+      </div>
+      <div class="ozellik">
+        <div class="ikon">🆚</div>
+        <div><h3>Rakip bul</h3><p>Takımın hazır, rakibin mi yok? Rakip ilanı aç; teklif eden takımlarla tek dokunuşla maç bağla.</p></div>
+      </div>
+      <div class="ozellik">
+        <div class="ikon">🔁</div>
+        <div><h3>Transfer pazarı</h3><p>Takım arayan oyuncular vitrine çıkar; kulüpler oradan seçer, teklif gönderir, kadrosuna katar.</p></div>
+      </div>
+      <div class="ozellik">
+        <div class="ikon">⚖️</div>
+        <div><h3>Adil kura</h3><p>İsimleri yaz, kurayı çek: kaleciler ayrı takımlara, güçler teraziye — "hep aynı takım kazanıyor" devri biter.</p></div>
+      </div>
+      <div class="ozellik">
+        <div class="ikon">🏘</div>
+        <div><h3>Kulüp ilanları</h3><p>Mahallenin kulüpleri tek panoda: antrenman duyuruları, kadro çağrıları, takım kurma araçları.</p></div>
+      </div>
+      <div class="ozellik">
+        <div class="ikon">🎮</div>
+        <div><h3>Mola arası oyunlar</h3><p>Penaltı düellosu, basket yağmuru, bilgi arenası… Maç yokken de takımınla atışırsın.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BRANŞLAR -->
+<section class="branslar">
+  <div class="dis">
+    <h2>Dört branş, tek uygulama</h2>
+    <p class="giris">Hangi topu seviyorsan onun etrafında: ilanlar, sahalar ve oyuncular branşına göre süzülür.</p>
+    <div class="brans-sira">
+      <div class="brans"><span class="top">⚽</span><b>Halı saha</b><small>7v7 · 8v8</small></div>
+      <div class="brans"><span class="top">🏀</span><b>Basketbol</b><small>3x3 · 5v5</small></div>
+      <div class="brans"><span class="top">🏐</span><b>Voleybol</b><small>karma dahil</small></div>
+      <div class="brans"><span class="top">🎾</span><b>Tenis</b><small>tekler · çiftler</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- KURA -->
+<section class="kura">
+  <div class="dis">
+    <h2>Kurayı uygulama çeksin, tartışma bitsin</h2>
+    <p class="giris">Yelekliler ile Yeleksizler'i güç dengesine göre kurar; beğenmezsen bir daha çekersin.</p>
+    <div class="vs">
+      <div class="takim yesil">
+        <b>🟢 Yelekliler</b>
+        <ul><li>🧤 Doruk</li><li>1 · Gözde</li><li>2 · Deren</li></ul>
+      </div>
+      <div class="vs-rozet">VS</div>
+      <div class="takim turuncu">
+        <b>🟠 Yeleksizler</b>
+        <ul><li>🧤 Cihangir</li><li>1 · Gaye</li><li>2 · Civan</li></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- KAPANIŞ -->
+<section class="kapanis" id="indir">
+  <div class="dis">
+    <h2>Bu hafta maçın eksiksiz olsun</h2>
+    <a class="cta" href="mailto:merhaba@eksikvar.app?subject=Beta%20daveti%20istiyorum">Beta davetini iste</a>
+    <p class="magaza">App Store ve Google Play sürümleri yolda — davet listesine yazıl, ilk sen haberdar ol.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="dis">
+    <span>© 2026 Eksik Var · Ankara'da, sahada yapıldı</span>
+    <span><a href="mailto:merhaba@eksikvar.app">merhaba@eksikvar.app</a></span>
+  </div>
+</footer>
+
+</body>
+</html>

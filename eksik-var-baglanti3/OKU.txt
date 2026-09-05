@@ -1,0 +1,22 @@
+EKSIK VAR - BAGLANTI 3 PAKETI: bildirim uretimi + push
+
+SIMDI:
+  cd ~/Desktop/eksik-var/eksik-var-app && npx expo install expo-notifications expo-device expo-constants
+  App.js, src/ -> eksik-var-app icine (ustune yaz)
+  supabase/ -> ~/Desktop/eksik-var/supabase/ (Edge Function kaynak kodu)
+  1-veritabani/supabase_kurulum.sql -> aksam yuklenecek TEK dosya (50 senaryo test edildi)
+
+AKSAM, SUPABASE KURULDUKTAN SONRA (push icin):
+  1) Supabase CLI: npm i -g supabase  (ya da brew install supabase/tap/supabase)
+  2) cd ~/Desktop/eksik-var && supabase login && supabase link --project-ref <PROJE_REF>
+  3) supabase functions deploy send-push --no-verify-jwt
+  4) supabase secrets set WEBHOOK_SECRET=<rastgele uzun bir metin>
+  5) Panel > Database > Webhooks > Create: table = notifications, events = Insert + Update,
+     type = Supabase Edge Function -> send-push, HTTP header: x-webhook-secret = <ayni metin>
+  6) Push icin EAS proje kimligi: cd eksik-var-app && npx eas init  (app.json'a extra.eas.projectId yazar)
+  Not: Expo Go'da push iOS'ta calisir; Android'de development build gerekir. Simdilik uygulama ici
+       bildirim listesi her iki platformda sunucudan gercek zamanli gelir; push, build asamasinda tamamlanir.
+
+Bildirimler artik sunucuda uretilir: basvuru, onay, kadro/doldu, ret, mesaj (sohbet basina tek satir,
+sessize alma ve tercihler dikkate alinir), haftalik seri duyurusu, mac oncesi hatirlatma (pg_cron, saat basi),
+yoklama hatirlatmasi. Uygulama bildirime dokununca: sohbet / etkinlik / yoklama / puanlama ekranina gider.

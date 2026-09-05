@@ -1,0 +1,10 @@
+EKSIK VAR - TARIH SECICI + TEKRAR EDEN ETKINLIK PAKETI
+
+App.js, src/*.js, src/screens/*.js -> eksik-var-app icine (ustune yaz)
+1-veritabani/supabase_kurulum.sql  -> aksam Supabase'e yuklenecek TEK dosya (iletisim + yoklama + tekrar dahil)
+1-veritabani/2..4-*.sql            -> ayni icerigin parcali halleri (kayit icin)
+
+Yeni: etkinlik olustururken gun/saat cipleri; "Her <gun>" haftalik tekrar (4/8/12 hafta ya da suresiz).
+Haftalik seride: tek kalici ekip grubu, her hafta yeni mac kaydi, mac tamamlaninca gelecek hafta otomatik
+acilir ve gruba "Haftaya ayni saat, N eksik" duyurusu duser. Sunucuda ayni mantik: events.series_id,
+conversations.series_id, group_conversation_for(), guncellenen trigger'lar, complete_event() -> next_event_id.

@@ -1,0 +1,13 @@
+EKSIK VAR - RAPOR TURU 1 PAKETI
+
+eksik-var-app/App.js, src/ -> eksik-var-app icine (ustune yaz)
+1-veritabani/supabase_kurulum.sql -> TEK dosya (101 senaryo). Zaten yuklediyseniz yalnizca 20-profil.sql'i calistirin.
+
+Bu turda (rapor 2.2-2.6 + 3.3):
+- Android geri tusu: kaplamalari kapatir, sohbetten listeye doner, sekmeleri gezer; uygulamadan atmaz
+- Sesli arama gizlendi: tuslar "Ara · yakinda", dokununca acikladi (WebRTC gelene kadar)
+- Cift onay aciklamasi: basvuru penceresi ve onay kartinda "son sozu sen soylersin, bu bir soz" cumlesi
+- Profili duzenle: ad, kullanici adi (benzersiz), il/ilce, seviye, kisa tanitim (yeni: users.skill_level)
+- Guvenilirlik: 5 mactan az "Yeni · N mac"; sonrasi yumusatilmis yuzde (ilk maci kacirana %0 gorunmez)
+- Ilk acilis: 3 tanitim karti (canli modda bir kez); ana sayfa bos durumunda "Ekibini getir" ve "Talep ac"
+- Ekibini getir: Profil > Ekibini getir (ve bos ekran) -> haftalik seri formu -> yayinlayinca WhatsApp davet mesaji

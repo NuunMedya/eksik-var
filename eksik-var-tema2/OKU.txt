@@ -1,0 +1,9 @@
+EKSIK VAR - KARANLIK MOD DUZELTME + TAM INGILIZCE PAKETI (sadece uygulama)
+
+eksik-var-app/App.js, src/, test/ -> eksik-var-app icine (ustune yaz)
+
+Karanlik mod: koyu yuzey ustunde koyu yesil yazi sorunu kokten cozuldu (yazi/simge rengi icin ayri turfText anahtari,
+  koyu temada acik yesil; 17 dosyada otomatik donusum).
+Ingilizce: ekranlardaki 290 sabit metin + 19 parametreli bildirim + spor/seviye/mevki/odeme/saha-ucret/anket/sikayet
+  etiketleri (toplam ~370) tek sozlukten cevriliyor (Turkce metin = anahtar). Ayarlar > Dil > English.
+  Kalan Turkce: ornek (demo) verileri ve bazi uzun dinamik cumleler.

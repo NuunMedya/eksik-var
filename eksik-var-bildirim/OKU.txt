@@ -1,0 +1,10 @@
+EKSIK VAR - BILDIRIMLER PAKETI (sadece uygulama dosyalari)
+
+App.js, src/*.js, src/screens/*.js -> eksik-var-app icine (ustune yaz)
+  YENI: src/screens/NotificationsScreen.js
+
+Ana sayfadaki zil: okunmamis rozeti + bildirim ekrani. Turler: basvuru, onay, kadro, doldu,
+mesaj, hatirlatma, yoklama, puanlama, tekrar. Bildirime dokununca ilgili yere gider.
+Bildirimler akislardan canli uretilir; Ayarlar > Bildirimler tercihlerine uyar;
+acik olan sohbetin mesaji bildirim yaratmaz.
+Gercek push bildirimi (telefon kilitliyken) Supabase baglantisindan sonra expo-notifications ile gelecek.

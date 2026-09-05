@@ -1,0 +1,10 @@
+EKSIK VAR - MAC SONUCU + MVP PAKETI
+
+eksik-var-app/App.js, src/ -> eksik-var-app icine (ustune yaz)
+1-veritabani/supabase_kurulum.sql -> TEK dosya (84 senaryo). Zaten yuklediyseniz yalnizca 16-mvp.sql'i calistirin.
+
+Tamamlanan macta organizator skoru girer (rakipte "Biz - Rakip", ekip icinde "Yelekliler - Yeleksizler"); gruba mesaj.
+Puanlama ekraninda "Macin oyuncusu (MVP)" secimi; oylar 48 saat sonra sayilir (pg_cron), kazanana bildirim + gruba
+duyuru, profilde "MVP xN" rozeti. Kurallar sunucuda: yalnizca macta olanlar oy verir, gelmeyene/kendine oy yok,
+oylama kapaninca oy yok. Etkinlik sayfasinda "Mac sonucu" karti: skor + onde olan/ilan edilen MVP.
+Demo: Cuma Hali Saha 5-4, MVP Zeynep (6 oy); profilinde MVP x1.

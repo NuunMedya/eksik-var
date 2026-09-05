@@ -1,0 +1,14 @@
+EKSIK VAR - AKTIFLESTIRME TURU (sadece uygulama dosyalari; demo mod)
+
+App.js ve src/ -> eksik-var-app icine (ustune yaz)
+  YENI: src/screens/RateScreen.js (puanlama), src/screens/BlockedScreen.js (engellenenler)
+
+Aktiflesen ozellikler:
+- Uye kartinda "Engelle" ve "Sikayet et" (neden secimi); Ayarlar > Engellenenler listesi ve engeli kaldirma.
+  Engellenen kisi mesaj atamaz/arayamaz, etkinlikleri akista gorunmez.
+- Puanlama: tamamlanan macta "Takim arkadaslarini puanla" (etkinlik detayi, profil karti, bildirim);
+  herkese yildiz + istege bagli yorum; ortalamalar guncellenir; "Puanladin" durumu.
+- Organizator: Duzenle (ayni formda, kadroya duyurulur) ve Iptal et (24 saatten az kala gec iptal → guvenilirlik).
+- Katilimci: Kadrodan ayril (24 saatten az kala gec ayrilma → guvenilirlik dusuyor).
+- Profil > Maclarim: yaklasan ve gecmis maclar, dokununca detay.
+Not: bu ozelliklerin canli mod (Supabase) baglantisi Baglanti 2'de eklenecek.

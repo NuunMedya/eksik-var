@@ -1,0 +1,10 @@
+EKSIK VAR - KARANLIK MOD + COKLU DIL PAKETI (sadece uygulama; veritabani degisikligi yok)
+
+eksik-var-app/App.js, src/, test/ -> eksik-var-app icine (ustune yaz)
+
+Karanlik mod: Ayarlar > Gorunum ve dil > Tema: Sistem / Acik / Koyu (cihazda saklanir, acilista uygulanir).
+  Altyapi: tek palet nesnesi (src/theme.js LIGHT/DARK), 23 ekranin stil tablolari tema degisince kendini yeniden kurar,
+  beyaz yuzeyler C.surface oldu, bildirim renkleri tema anahtari. Sistem modunda telefon temasini izler.
+Coklu dil: Ayarlar > Dil: Turkce / English. src/i18n.js sozlugu (t("anahtar")); sekmeler, ilk acilis, giris,
+  ana sayfa, ayarlar ve profil basliklari, etkinlik tuslari Ingilizce. Sozlukte olmayan metinler Turkce kalir;
+  yeni anahtar eklemek: i18n.js'te TR ve EN'e satir ekle, ekranda t("anahtar") kullan.

@@ -1,0 +1,12 @@
+name: lint
+on: [push, pull_request]
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: cd eksik-var-app && npm ci
+      - run: cd eksik-var-app && npx eslint -c eslint.config.mjs "App.js" "src/**/*.js"
+      - run: cd eksik-var-app && node test/run.mjs

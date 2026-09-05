@@ -1,0 +1,10 @@
+EKSIK VAR - MEVKI IHTIYACI PAKETI
+
+eksik-var-app/App.js, src/ -> eksik-var-app icine (ustune yaz)
+1-veritabani/supabase_kurulum.sql -> Supabase'e yuklenecek TEK dosya (55 senaryo). Zaten yuklediyseniz
+                                     yalnizca 10-mevki.sql'i SQL Editor'da calistirin.
+
+Organizator: talep acarken mevki basina sayi (kalan = farketmez; toplam eksik sayisini asamaz).
+Oyuncu: Profil > Mevkilerim; basvururken mevki secer (varsayilan: kendi mevkisi). Kartta "1 kaleci · 1 defans",
+detayda "Kaleci 0/1 · Defans 1/1 ✓"; ana sayfada "Bana uygun" filtresi. Sunucu: dolu mevkiye basvuru ve onay engeli,
+v_event_position_fill ile herkes doluluk sayilarini gorur.

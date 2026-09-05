@@ -1,0 +1,10 @@
+EKSIK VAR - "VAR MISIN?" SABIT KADRO PAKETI
+
+eksik-var-app/App.js, src/ -> eksik-var-app icine (ustune yaz)
+1-veritabani/supabase_kurulum.sql -> TEK dosya (80 senaryo). Zaten yuklediyseniz yalnizca 15-varmisin.sql'i calistirin.
+
+Haftalik serilerde maca 72 saat kala seri grubunda otomatik "Bu hafta var misin?" anketi (Varim/Yokum/Belli degil),
+24 saat kala cevapsizlara hatirlatma (pg_cron). Etkinlik sayfasinda kart: organizatore ozet (varim/yokum/belli degil/
+cevapsiz) + kadro hesabi + "Eksigi N yap" tek dokunus (gruba duyurulur); uyelere hizli cevap tuslari; "Simdi sor".
+Seri acarken "uygulamada olmayan sabit oyuncu sayisi" (hesapta her hafta var sayilir).
+Demo: Pazar Ligi serisinde 8 varim / 1 yokum / 1 cevapsiz -> onerilen eksik 3 (su an 2).

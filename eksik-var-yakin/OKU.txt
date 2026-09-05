@@ -1,0 +1,12 @@
+EKSIK VAR - "YAKININDA MAC ACILDI" BILDIRIMI PAKETI
+
+eksik-var-app/App.js, src/ -> eksik-var-app icine (ustune yaz)
+1-veritabani/supabase_kurulum.sql -> TEK dosya (100 senaryo). Zaten yuklediyseniz yalnizca 19-yakin.sql'i calistirin.
+
+Yeni ilan acilinca sunucu, ayni ilcedeki (ilce yoksa ildeki) kullanicilara bildirim gonderir:
+- ilan mevkiye bagliysa yalnizca o mevkideki oyunculara ("kaleci ariyorlar"), serbest kontenjan varsa herkese
+- organizator, engelli iliskiler, tercihi kapali olanlar ve banlilar haric
+- kisi basi gunde en fazla 2, ilan basina en fazla 50 kisi (mevkisi uyanlar once)
+- rakip ilanlari sehirdeki takim kaptanlarina (takim adi olanlara); serilerin sonraki haftalari duyurulmaz
+Ayarlar > Bildirimler > "Yakinimda mac acilinca" ile kapatilabilir. Bildirime dokununca etkinlik acilir.
+Push icin Baglanti 3 (send-push) yeterli; ek kurulum yok.

@@ -1,0 +1,14 @@
+EKSIK VAR - RAPOR TURU 2 PAKETI (yeni paket: expo-calendar)
+
+ONCE:  cd ~/Desktop/eksik-var/eksik-var-app && npx expo install expo-calendar
+Sonra: eksik-var-app/App.js, src/ -> eksik-var-app icine (ustune yaz)
+1-veritabani/supabase_kurulum.sql -> TEK dosya (106 senaryo). Zaten yuklediyseniz yalnizca 21-misafir.sql'i calistirin.
+
+Bu turda (rapor 2.1, 3.1, 3.2):
+- Uygulamasiz oyuncular: etkinlik sayfasinda organizator adla ekler/cikarir, "bu hafta var/yok" der; seride her haftaya
+  otomatik tasinir; yoklama, odeme listesi, kura ve grup bilgisinde "uygulamada degil" etiketiyle yer alirlar;
+  eksik onerisi onlari sayar. (Demo: Pazar Ligi'nde Hasan ve Mehmet; dunku macin yoklamasinda Hasan)
+- Etkinlik sayfasi asamaya gore sadelesti: yaklasan macta acikla/basvurular acik, odemeler kapali; oynanmis/tamamlanmis macta
+  odemeler acik, aciklama 2 satir, mevkiler ve "var misin" gizli. Basliklara dokununca acilip kapanir.
+- Tam tarih her yerde ("Per 3 Eyl · 21:00"; yalnizca Bugun/Yarin kisaltmasi). Yaklasan macta "Yol tarifi" (Apple/Google
+  Haritalar) ve kadrodaysan "Takvime ekle" (2 saat once alarmli).

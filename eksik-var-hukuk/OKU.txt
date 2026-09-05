@@ -1,0 +1,7 @@
+EKSIK VAR - HUKUKI METINLER + UYGULAMA ONAYLARI
+
+hukuk/  -> 3 metin, .md (depo icin) ve .html (alan adina konacak, tarayicida acilir) + index.html
+           gizlilik-politikasi, kvkk-aydinlatma-metni, kullanim-sartlari
+           [KOSELI PARANTEZ] alanlari doldurulmali; yayin oncesi hukuk danismani incelemeli.
+App.js, src/ -> kayitta "okudum, kabul ediyorum" onayi (linkli) + Ayarlar > Hesap ve hukuki
+                (metin linkleri, Hesabimi sil). Linkler eksikvar.app alan adini bekliyor.

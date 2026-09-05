@@ -1,0 +1,15 @@
+EKSIK VAR - YOKLAMA & GUVENILIRLIK PAKETI
+
+App.js          -> eksik-var-app/ (ustune yaz)
+src/*.js        -> eksik-var-app/src/ (data.js ve components.js degisti)
+src/screens/    -> eksik-var-app/src/screens/ (hepsi; YENI: AttendanceScreen.js)
+1-veritabani/   -> supabase_kurulum.sql: aksam Supabase'e yuklenecek TEK dosya (yoklama dahil)
+                   3-yoklama.sql ve 2-iletisim-ayarlari.sql: ayni icerigin parcali halleri (kayit icin)
+
+Uygulama akisi:
+- Ana sayfada "Yoklama bekliyor" uyarisi (organizator) -> yoklama ekrani
+- Yoklama: herkes varsayilan "Geldi", gelmeyenler isaretlenir, onay sorulur, mac tamamlanir
+- Etkinlik detayinda yoklama ozeti (organizator) / katildin-gelmedin durumu + itiraz (katilimci)
+- Profilde guvenilirlik karti: yuzde, cubuk, gecmis
+Sunucu: complete_event(), 48 saat kurali (auto_complete_events + pg_cron), erken yoklama engeli,
+        gelmeyenlere bildirim gitmez, organizator kendi macina katilmis sayilir.

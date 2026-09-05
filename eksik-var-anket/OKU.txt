@@ -1,0 +1,9 @@
+EKSIK VAR - SOHBETTE ANKET PAKETI
+
+eksik-var-app/App.js, src/ -> eksik-var-app icine (ustune yaz)
+1-veritabani/supabase_kurulum.sql -> TEK dosya (75 senaryo). Zaten yuklediyseniz yalnizca 14-anket.sql'i calistirin.
+
+Grup sohbetinde yazi kutusunun solundaki 📊 tusu: hazir sablonlar (gun, saat, var misin, forma) ya da
+serbest soru; 2-5 secenek; tek/coklu secim. Anket sohbette kart olarak akar: dokunarak oy, yuzde cubuklari,
+kim ne dedi (anonim degil), olusturan kapatabilir. Canli modda oylar gercek zamanli. Demo: Pazar Ligi grubunda
+hazir bir anket var; yeni anket acinca uyeler birkac saniyede oy verir.

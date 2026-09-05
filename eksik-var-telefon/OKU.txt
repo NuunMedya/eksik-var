@@ -1,0 +1,14 @@
+EKSIK VAR - TELEFON DOGRULAMA + HESAP YAPTIRIMLARI PAKETI
+
+App.js, src/ -> eksik-var-app icine (ustune yaz). Demo modda SMS kodu: 123456
+1-veritabani/supabase_kurulum.sql -> aksam yuklenecek TEK dosya (telefon/yaptirim dahil, 37 senaryo test edildi)
+hukuk/ -> SMS saglayicisi ve yasakli kayit cumleleri eklenmis guncel metinler
+
+AKSAM SUPABASE PANELINDE (kuruluma ek):
+  Authentication > Providers > Phone > Enable. SMS saglayicisi:
+   - Hizli baslangic: Twilio (twilio.com, deneme hesabi; Account SID, Auth Token, Messaging Service SID)
+     Not: deneme hesabi yalnizca Twilio'da dogruladiginiz numaralara SMS atar; yayin oncesi ucretli hesap.
+   - Test icin SMS'siz yol: Phone ayarlarinda "Test OTPs / test phone numbers" varsa iki telefonunuzu
+     sabit kodla ekleyin (ornek 905xx... -> 123456); SMS gonderilmeden dogrulama calisir.
+   - Yayin: Turk saglayici (Netgsm / Ileti Merkezi) Auth Hooks > Send SMS ile baglanir; SMS basina ~0.3 TL.
+  Email dogrulamasi artik gerekmiyor (giris telefonla).

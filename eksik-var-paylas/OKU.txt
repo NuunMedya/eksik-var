@@ -1,0 +1,8 @@
+EKSIK VAR - WHATSAPP'A PAYLAS PAKETI (sadece uygulama dosyalari)
+
+App.js, src/*.js, src/screens/*.js -> eksik-var-app icine (ustune yaz)
+
+Yeni: etkinlik detayinda "Paylas" (herkes) ve organizator icin "WhatsApp grubuna at" tusu;
+profilde "Arkadasini davet et". Telefonun paylasim menusu acilir (WhatsApp, Telegram, SMS...).
+Link (eksikvar.app) yayin asamasinda baglanacak alan adi icin yer tutucudur; ?d= parametresi
+daveti kimin attigini tasir (ileride "kim kac kisi getirdi" istatistigi icin).

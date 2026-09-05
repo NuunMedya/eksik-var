@@ -1,0 +1,13 @@
+EKSIK VAR - RAPOR TURU 4 PAKETI (sadece uygulama dosyalari; veritabani degisikligi yok)
+
+eksik-var-app/App.js, src/ -> eksik-var-app icine (ustune yaz)
+
+Rapor 4.1-4.15:
+ 4.1 Ana sayfada "Yaklasan maclarin" seridi (bugun turuncu)   4.2 Ilce cipleri: ilcem once, en aktif 5, "Diger ilceler" secici
+ 4.3 Kartta fiyat (Ucretsiz vurgulu) ve seviye rozeti          4.4 "Bana uygun" uzun basinca aciklama
+ 4.5 Basvuruda hazir cumleler (mevkiye gore)                    4.6 Arama > Etkinlikler: spor, ucretsiz, seviye filtreleri
+ 4.7 Kura: defans/orta/forvet dengesi                            4.8 Puanlama: varsayilan 4, "Hepsine 5 / 4 / Temizle"
+ 4.9 Odemeler: "Herkes odedi · hepsini isaretle"                4.10 Rozetlere dokununca aciklama (dogrulanmis, guvenilirlik, MVP)
+ 4.11 Cipler 36px, 10px yazilar 11px, soluk metin kontrasti     4.12 Canli: bildirim izni ilk kadroya giris/ilandan sonra, gerekceyle
+ 4.13 Seri yeni hafta ipucu metni                                4.14 Profilde takim rozeti (Cankaya Yildizlari · 12 mac)
+ 4.15 Talep/rakip formu 3 adim: ne-nerede-ne zaman -> kadro ve detaylar -> ozet ve yayin

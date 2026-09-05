@@ -1,0 +1,10 @@
+EKSIK VAR - KADROYA DAVET PAKETI
+
+eksik-var-app/App.js, src/ -> eksik-var-app icine (ustune yaz)
+1-veritabani/supabase_kurulum.sql -> TEK dosya (61 senaryo). Zaten yuklediyseniz yalnizca 11-davet.sql'i calistirin.
+
+Organizator: profil ya da uye kartinda "Kadroya davet et" -> acik etkinliklerinden birini secer (mevki otomatik:
+kisinin mevkisine uyan acik yer, yoksa farketmez). Davet edilen: bildirim + birebir sohbette davet karti +
+etkinlik sayfasinda "Daveti kabul et / Reddet". Kabul = son onay (cift onay mekanizmasi), red organizatore bildirilir.
+Sunucu: invite_user() yetki/engel/cift davet/mevki kontrolleri; bildirim trigger'lari davet metinleriyle.
+Demo: Ali'den gelen bir davet hazir (Cankaya Cuma Maci, defans); davet ettigin kisi 4 sn sonra kabul eder.

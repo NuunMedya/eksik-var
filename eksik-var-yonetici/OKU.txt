@@ -1,0 +1,14 @@
+EKSIK VAR - YONETICI PANELI PAKETI
+
+site/admin/index.html -> ~/Desktop/eksik-var/site/admin/ (siteyle yayinlanir: eksikvar.app/admin; yerelde cift tiklayip da acilir)
+1-veritabani/supabase_kurulum.sql -> TEK dosya (89 senaryo). Zaten yuklediyseniz: once 17-yonetici.sql,
+                                     sonra 17b-yetki-sikilastirma.sql (GRANT'lerden sonra calismali).
+
+KURULUM (Supabase kurulduktan sonra, bir kez):
+  SQL Editor: INSERT INTO admins(user_id, note) SELECT id, 'kurucu' FROM users WHERE username IN ('KULLANICI_ADIN','ESININ_KULLANICI_ADI');
+  Panel: ilk acilista Project URL + anon anahtar (tarayicida saklanir), telefonla SMS kodu ile giris.
+  Yonetici olmayan hesap "Yetkisiz" gorur; tum islemler sunucuda is_admin() ile denetlenir.
+
+Panel: Ozet, Sikayetler (incelendi/kapat, 7 gun aski, ban), Yoklama itirazlari (itiraz hakli -> gelmedi geri alinir),
+Kullanicilar (ara, detay, aski/ban/yeniden ac).
+GUVENLIK DUZELTMESI: sikayet kuyrugu yalnizca yoneticilere; ic fonksiyonlar istemciden cagrilamaz.

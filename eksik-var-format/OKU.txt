@@ -1,0 +1,12 @@
+EKSIK VAR - SPOR FORMATLARI PAKETI (sadece uygulama dosyalari; veritabani degisikligi yok)
+
+eksik-var-app/App.js, src/ -> eksik-var-app icine (ustune yaz)
+
+Spora gore format ve kadro:
+  Hali saha: 5v5 (10) · 6v6 (12) · 7v7 (14) · 8v8 (16) · 11v11 (22)   varsayilan 7v7
+  Basketbol: 3x3 (6) · 5v5 (10)                                      varsayilan 5v5
+  Voleybol:  2v2 Plaj (4) · 4v4 (8) · 6v6 (12)                         varsayilan 6v6
+  Tenis:     Tekler 1v1 (2) · Ciftler 2v2 (4)                          varsayilan Tekler
+Talep acarken kategori secince format cipleri gelir, kadro sayisi formattan otomatik dolar (salt okunur),
+eksik sayisi kadro-1 ile sinirlanir; rakip ilanlarinda ayni formatlar (kadro = tarafin oyuncu sayisi).
+Kartta "7v7 · 14 kisi", detayda seviye yaninda format. Mevki alani yalnizca mevkisi olan sporlarda (tenis yok).

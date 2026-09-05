@@ -1,0 +1,10 @@
+EKSIK VAR - GRUP BILGISI PAKETI
+
+App.js        -> eksik-var-app/ icine (ustune yaz)
+src/data.js   -> eksik-var-app/src/ icine (ustune yaz)
+src/screens/  -> eksik-var-app/src/screens/ icine (hepsi, ustune yaz)
+                 YENI: GroupInfoScreen.js (grup bilgisi + uye profil karti)
+
+Not: Bu paket onceki "arama + ayarlar" paketinin uzerine gelir; onu kurmadiysan da sorun yok,
+tum ekranlar bu pakette guncel haliyle var. Giris ekrani assets/logo-mark.png ister
+(logo paketinden geliyor; yoksa onu da kur).

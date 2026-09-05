@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Eksik Var · Yönetim</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--turf:#0B3D2E;--pitch:#17994F;--pitchS:#E3F4EA;--kit:#F4600C;--kitS:#FFEDE0;--chalk:#F7F6F2;--ink:#14201B;--faint:#6B7A72;--line:#E8E5DD;--danger:#C0392B}
+*{box-sizing:border-box}body{margin:0;background:var(--chalk);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+header{background:var(--turf);color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between}
+header b{font-style:italic;font-weight:900;font-size:18px}header b span{color:var(--kit)}
+header small{color:#BFD9CC}
+main{max-width:1100px;margin:0 auto;padding:20px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}.tab{padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:#fff;cursor:pointer;font-weight:700}.tab.on{background:var(--turf);color:#fff;border-color:var(--turf)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}.stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px}.stat b{font-size:24px;display:block;color:var(--turf)}.stat span{font-size:12px;color:var(--faint)}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--faint);font-weight:700;font-size:11px;letter-spacing:.5px}
+.btn{border:0;border-radius:8px;padding:6px 10px;font-weight:800;cursor:pointer;font-size:12px;margin:2px}.b1{background:var(--pitchS);color:var(--turf)}.b2{background:var(--kitS);color:var(--kit)}.b3{background:#FDECEA;color:var(--danger)}.b4{background:var(--turf);color:#fff}
+input,select{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:14px}
+.pill{display:inline-block;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:800}.p-bekliyor{background:var(--kitS);color:var(--kit)}.p-incelendi{background:#E8F0FF;color:#1D5FBF}.p-kapatildi{background:var(--pitchS);color:var(--turf)}
+.p-aktif{background:var(--pitchS);color:var(--turf)}.p-askida{background:var(--kitS);color:var(--kit)}.p-banli{background:#FDECEA;color:var(--danger)}
+.muted{color:var(--faint);font-size:12px}#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:999px;display:none}
+.login{max-width:420px;margin:60px auto}
+</style></head><body>
+<header><div><b>EKSİK <span>VAR</span></b> <small>· Yönetim</small></div><div id="who" class="muted" style="color:#BFD9CC"></div></header>
+<main id="app"></main><div id="toast"></div>
+<script>
+// ---- yapılandırma (Project Settings > API) — anon anahtar; yetki sunucuda is_admin() ile denetlenir ----
+const CFG = { url: localStorage.getItem("ev_url") || "", key: localStorage.getItem("ev_key") || "" };
+let sb = null, me = null, tab = "ozet";
+const $ = (s) => document.querySelector(s);
+const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const toast = (m) => { const t = $("#toast"); t.textContent = m; t.style.display = "block"; setTimeout(() => (t.style.display = "none"), 2800); };
+const fmt = (d) => d ? new Date(d).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" }) : "–";
+const REASON = { taciz: "Taciz / hakaret", sahte_etkinlik: "Sahte etkinlik", gelmedi: "Sürekli gelmiyor", dolandiricilik: "Dolandırıcılık", diger: "Diğer", yoklama_itiraz: "Yoklama itirazı" };
+
+function render(html) { $("#app").innerHTML = html; }
+
+// ---- giriş ----
+function renderConfig() {
+  render(`<div class="card login"><h3>Bağlantı</h3><p class="muted">Supabase Project URL ve anon (publishable) anahtar. Bu tarayıcıda saklanır.</p>
+    <input id="u" placeholder="https://xxxx.supabase.co" value="${esc(CFG.url)}" style="width:100%;margin-bottom:8px">
+    <input id="k" placeholder="anon public key" value="${esc(CFG.key)}" style="width:100%;margin-bottom:12px">
+    <button class="btn b4" onclick="saveCfg()">Kaydet ve devam</button></div>`);
+}
+function saveCfg() { CFG.url = $("#u").value.trim(); CFG.key = $("#k").value.trim(); localStorage.setItem("ev_url", CFG.url); localStorage.setItem("ev_key", CFG.key); boot(); }
+function renderLogin(step = "phone", phone = "") {
+  render(`<div class="card login"><h3>Yönetici girişi</h3>
+    ${step === "phone" ? `<p class="muted">Uygulamadaki telefon numaranla gir; SMS kodu gelir. Yönetici değilsen panel açılmaz.</p>
+      <input id="ph" placeholder="+905xxxxxxxxx" style="width:100%;margin-bottom:10px"><button class="btn b4" onclick="sendCode()">Kod gönder</button>`
+    : `<p class="muted">${esc(phone)} numarasına gönderilen 6 haneli kod:</p>
+      <input id="code" placeholder="123456" style="width:100%;margin-bottom:10px"><button class="btn b4" onclick="verify('${esc(phone)}')">Doğrula</button>`}
+    <p class="muted" style="margin-top:14px"><a href="#" onclick="localStorage.clear();location.reload()">Bağlantı ayarlarını değiştir</a></p></div>`);
+}
+async function sendCode() { const phone = $("#ph").value.trim(); const { error } = await sb.auth.signInWithOtp({ phone, options: { shouldCreateUser: false } }); if (error) return toast(error.message); renderLogin("code", phone); }
+async function verify(phone) { const { error } = await sb.auth.verifyOtp({ phone, token: $("#code").value.trim(), type: "sms" }); if (error) return toast(error.message); boot(); }
+async function logout() { await sb.auth.signOut(); location.reload(); }
+
+// ---- panel ----
+async function boot() {
+  if (!CFG.url || !CFG.key) return renderConfig();
+  sb = supabase.createClient(CFG.url, CFG.key);
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return renderLogin();
+  const { data: admin, error } = await sb.rpc("is_admin");
+  if (error || !admin) { render(`<div class="card login"><h3>Yetkisiz</h3><p>Bu hesap yönetici değil. SQL Editor'da: <code>INSERT INTO admins(user_id) SELECT id FROM users WHERE username='KULLANICI_ADIN';</code></p><button class="btn b3" onclick="logout()">Çıkış</button></div>`); return; }
+  const { data: u } = await sb.from("users").select("full_name, username").eq("id", session.user.id).maybeSingle();
+  me = { id: session.user.id, name: u ? u.full_name : "Yönetici" };
+  $("#who").innerHTML = `${esc(me.name)} · <a href="#" style="color:#fff" onclick="logout()">çıkış</a>`;
+  show(tab);
+}
+function show(t) { tab = t; ({ ozet: renderStats, sikayet: () => renderReports(false), itiraz: () => renderReports(true), kullanici: renderUsers })[t](); }
+function tabsHtml() {
+  return `<div class="tabs">${[["ozet", "Özet"], ["sikayet", "Şikayetler"], ["itiraz", "Yoklama itirazları"], ["kullanici", "Kullanıcılar"]].map(([id, l]) => `<div class="tab ${tab === id ? "on" : ""}" onclick="show('${id}')">${l}</div>`).join("")}</div>`;
+}
+async function renderStats() {
+  const { data: s, error } = await sb.rpc("admin_stats"); if (error) return toast(error.message);
+  render(tabsHtml() + `<div class="stats">${[["users", "Kullanıcı"], ["users_today", "Bugün kayıt"], ["events_open", "Açık etkinlik"], ["events_week", "Bu hafta açılan"], ["reports_pending", "Bekleyen şikayet"], ["disputes_pending", "Bekleyen itiraz"], ["suspended", "Askıda"], ["banned", "Banlı"]].map(([k, l]) => `<div class="stat"><b>${s[k] ?? 0}</b><span>${l}</span></div>`).join("")}</div>
+    <div class="card muted">Saatlik sunucu görevleri: yoklama otomatik tamamlama, hatırlatmalar, var mısın anketleri, yedek teklif süreleri, MVP ilanı. pg_cron açık olmalı.</div>`);
+}
+async function renderReports(disputes) {
+  let q = sb.from("v_report_queue").select("*").order("created_at", { ascending: false }).limit(200);
+  q = disputes ? q.eq("reason", "yoklama_itiraz") : q.neq("reason", "yoklama_itiraz");
+  const { data, error } = await q; if (error) return toast(error.message);
+  const rows = (data || []).map((r) => `<tr>
+    <td>${fmt(r.created_at)}<br><span class="pill p-${r.status}">${r.status}</span></td>
+    <td><b>${esc(REASON[r.reason] || r.reason)}</b><br><span class="muted">${esc(r.description || "")}</span>${r.admin_note ? `<br><span class="muted">Not: ${esc(r.admin_note)}</span>` : ""}</td>
+    <td>${esc(r.reporter_name)} <span class="muted">@${esc(r.reporter_username)}</span></td>
+    <td>${r.reported_user_id ? `<a href="#" onclick="openUser('${r.reported_user_id}')">${esc(r.reported_name)}</a> <span class="muted">@${esc(r.reported_username)} · <span class="pill p-${r.reported_status}">${r.reported_status}</span> · %${Math.round(r.reported_reliability ?? 100)} · ${r.total_reports} şikayet</span>` : "–"}</td>
+    <td>${r.event_title ? `${esc(r.event_title)}<br><span class="muted">${fmt(r.event_date)}</span>` : "–"}</td>
+    <td>${r.status === "bekliyor" ? `
+      ${disputes && r.event_id ? `<button class="btn b1" onclick="revert('${r.event_id}','${r.reporter_id}',${r.id})">İtiraz haklı · gelmedi'yi geri al</button>` : ""}
+      <button class="btn b1" onclick="resolve(${r.id},'incelendi')">İncelendi</button>
+      <button class="btn b1" onclick="resolve(${r.id},'kapatildi')">Kapat</button>
+      ${r.reported_user_id ? `<button class="btn b2" onclick="suspend('${r.reported_user_id}',${r.id})">7 gün askı</button><button class="btn b3" onclick="ban('${r.reported_user_id}',${r.id})">Banla</button>` : ""}` : "–"}</td></tr>`).join("");
+  render(tabsHtml() + `<div class="card"><h3 style="margin-top:0">${disputes ? "Yoklama itirazları" : "Şikayetler"} <span class="muted">(${(data || []).length})</span></h3>
+    <table><tr><th>Tarih</th><th>Neden</th><th>Şikayet eden</th><th>Şikayet edilen</th><th>Etkinlik</th><th>İşlem</th></tr>${rows || "<tr><td colspan=6 class=muted>Kayıt yok</td></tr>"}</table></div>`);
+}
+async function resolve(id, status) { const note = prompt("Not (isteğe bağlı):") || null; const { error } = await sb.rpc("resolve_report", { p_report: id, p_status: status, p_note: note }); if (error) return toast(error.message); toast("Güncellendi"); show(tab); }
+async function revert(eventId, userId, reportId) { if (!confirm("Bu kişinin 'gelmedi' kaydı 'katıldı' yapılacak ve güvenilirliği düzelecek. Onaylıyor musun?")) return; let r = await sb.rpc("revert_no_show", { p_event: eventId, p_user: userId }); if (r.error) return toast(r.error.message); await sb.rpc("resolve_report", { p_report: reportId, p_status: "kapatildi", p_note: "İtiraz haklı bulundu, gelmedi geri alındı" }); toast("Geri alındı"); show(tab); }
+async function suspend(userId, reportId) { const days = Number(prompt("Kaç gün askı?", "7") || 0); if (!days) return; const reason = prompt("Sebep:", "kural ihlali") || "kural ihlali"; const { error } = await sb.rpc("suspend_user", { p_user: userId, p_days: days, p_reason: reason }); if (error) return toast(error.message); if (reportId) await sb.rpc("resolve_report", { p_report: reportId, p_status: "incelendi", p_note: `${days} gün askı: ${reason}` }); toast("Askıya alındı"); show(tab); }
+async function ban(userId, reportId) { const reason = prompt("Ban sebebi (kalıcı, geri alınabilir):", "kural ihlali"); if (reason === null) return; if (!confirm("Hesap kapatılacak, telefon/e-posta özetle yasak listesine girecek. Emin misin?")) return; const { error } = await sb.rpc("ban_user", { p_user: userId, p_reason: reason || "kural ihlali" }); if (error) return toast(error.message); if (reportId) await sb.rpc("resolve_report", { p_report: reportId, p_status: "kapatildi", p_note: "ban: " + reason }); toast("Banlandı"); show(tab); }
+async function reinstate(userId) { const { error } = await sb.rpc("reinstate_user", { p_user: userId }); if (error) return toast(error.message); toast("Hesap yeniden açıldı"); openUser(userId); }
+
+async function renderUsers(q = "") {
+  let query = sb.from("users").select("id, full_name, username, phone, status, status_reason, suspended_until, reliability_pct, no_show_count, events_joined, events_organized, rating_avg, rating_count, created_at, cities(name)").order("created_at", { ascending: false }).limit(50);
+  if (q) query = query.or(`full_name.ilike.%${q}%,username.ilike.%${q}%,phone.ilike.%${q}%`);
+  const { data, error } = await query; if (error) return toast(error.message);
+  render(tabsHtml() + `<div class="card"><div style="display:flex;gap:8px;margin-bottom:10px"><input id="q" placeholder="Ad, kullanıcı adı ya da telefon" value="${esc(q)}" style="flex:1" onkeydown="if(event.key==='Enter')renderUsers(this.value)"><button class="btn b4" onclick="renderUsers($('#q').value)">Ara</button></div>
+    <table><tr><th>Kullanıcı</th><th>Durum</th><th>Güvenilirlik</th><th>Maç</th><th>Puan</th><th>Kayıt</th><th></th></tr>
+    ${(data || []).map((u) => `<tr><td><b>${esc(u.full_name)}</b><br><span class="muted">@${esc(u.username)} · ${esc(u.phone || "")} · ${esc(u.cities ? u.cities.name : "")}</span></td>
+      <td><span class="pill p-${u.status}">${u.status}</span>${u.status_reason ? `<br><span class="muted">${esc(u.status_reason)}</span>` : ""}${u.suspended_until ? `<br><span class="muted">→ ${fmt(u.suspended_until)}</span>` : ""}</td>
+      <td>%${Math.round(u.reliability_pct ?? 100)} <span class="muted">(${u.no_show_count} gelmedi)</span></td><td>${u.events_joined} / ${u.events_organized} org.</td><td>★ ${u.rating_avg} (${u.rating_count})</td><td>${fmt(u.created_at)}</td>
+      <td><button class="btn b1" onclick="openUser('${u.id}')">Aç</button></td></tr>`).join("") || "<tr><td colspan=7 class=muted>Sonuç yok</td></tr>"}</table></div>`);
+}
+async function openUser(id) {
+  const [{ data: u }, { data: reps }, { data: evs }] = await Promise.all([
+    sb.from("users").select("*, cities(name), districts(name)").eq("id", id).maybeSingle(),
+    sb.from("v_report_queue").select("*").eq("reported_user_id", id).order("created_at", { ascending: false }),
+    sb.from("events").select("id, title, event_date, status, kind").eq("organizer_id", id).order("event_date", { ascending: false }).limit(10),
+  ]);
+  if (!u) return toast("Kullanıcı bulunamadı");
+  render(tabsHtml() + `<div class="card"><a href="#" onclick="renderUsers()">← Kullanıcılar</a>
+    <h2 style="margin:8px 0 2px">${esc(u.full_name)} <span class="pill p-${u.status}">${u.status}</span></h2>
+    <div class="muted">@${esc(u.username)} · ${esc(u.phone || "")} · ${esc(u.cities?.name || "")}${u.districts ? " / " + esc(u.districts.name) : ""} · kayıt ${fmt(u.created_at)}${u.status_reason ? " · " + esc(u.status_reason) : ""}</div>
+    <div class="stats" style="margin:12px 0"><div class="stat"><b>%${Math.round(u.reliability_pct ?? 100)}</b><span>güvenilirlik · ${u.no_show_count} gelmedi</span></div><div class="stat"><b>${u.events_joined}</b><span>katılım</span></div><div class="stat"><b>${u.events_organized}</b><span>organizasyon</span></div><div class="stat"><b>★ ${u.rating_avg}</b><span>${u.rating_count} puan</span></div><div class="stat"><b>${u.mvp_count ?? 0}</b><span>MVP</span></div></div>
+    <div>${u.status === "aktif" ? `<button class="btn b2" onclick="suspend('${u.id}')">Askıya al</button><button class="btn b3" onclick="ban('${u.id}')">Banla</button>` : `<button class="btn b1" onclick="reinstate('${u.id}')">Hesabı yeniden aç</button>`}</div>
+    <h4>Hakkındaki şikayetler (${(reps || []).length})</h4>
+    <table>${(reps || []).map((r) => `<tr><td>${fmt(r.created_at)}</td><td><span class="pill p-${r.status}">${r.status}</span></td><td>${esc(REASON[r.reason] || r.reason)}</td><td>${esc(r.reporter_name)}</td><td class="muted">${esc(r.description || "")}</td></tr>`).join("") || "<tr><td class=muted>Yok</td></tr>"}</table>
+    <h4>Organize ettiği son etkinlikler</h4>
+    <table>${(evs || []).map((e) => `<tr><td>${esc(e.title)}</td><td>${fmt(e.event_date)}</td><td>${e.kind === "rakip" ? "🆚" : "👤"} ${e.status}</td></tr>`).join("") || "<tr><td class=muted>Yok</td></tr>"}</table></div>`);
+}
+boot();
+</script></body></html>

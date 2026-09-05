@@ -1,0 +1,93 @@
+import React from "react";
+import { View, Text, TouchableOpacity, FlatList, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { C, onThemeChange } from "../theme";
+import { NOTIF_META } from "../data";
+
+export default function NotificationsScreen({ notifications, onBack, onOpen, onReadAll, onSettings }) {
+  const unread = notifications.filter((n) => !n.read).length;
+
+  return (
+    <View style={{ flex: 1, backgroundColor: C.chalk }}>
+      <View style={st.header}>
+        <TouchableOpacity onPress={onBack} style={{ paddingRight: 8 }}>
+          <Ionicons name="chevron-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: "#fff", fontWeight: "900", fontSize: 17 }}>Bildirimler</Text>
+          <Text style={{ color: C.mist, fontSize: 11 }}>
+            {unread > 0 ? `${unread} okunmamış` : "Hepsi okundu"}
+          </Text>
+        </View>
+        {unread > 0 && (
+          <TouchableOpacity onPress={onReadAll} style={st.readAll}>
+            <Ionicons name="checkmark-done" size={15} color="#fff" />
+            <Text style={{ color: "#fff", fontWeight: "800", fontSize: 12 }}>Tümünü oku</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <FlatList
+        data={notifications}
+        keyExtractor={(n) => n.id}
+        contentContainerStyle={{ padding: 18, paddingBottom: 40 }}
+        renderItem={({ item: n }) => {
+          const raw = NOTIF_META[n.type] || NOTIF_META.mesaj; const m = { icon: raw.icon, color: C[raw.color] || raw.color, bg: C[raw.bg] || raw.bg };
+          return (
+            <TouchableOpacity onPress={() => onOpen(n)} style={[st.row, !n.read && st.rowUnread]}>
+              <View style={[st.icon, { backgroundColor: m.bg }]}>
+                <Ionicons name={m.icon} size={18} color={m.color} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <Text style={{ fontWeight: n.read ? "700" : "900", fontSize: 14, color: C.ink, flex: 1 }} numberOfLines={1}>
+                    {n.title}
+                  </Text>
+                  <Text style={{ fontSize: 11, color: n.read ? C.faint : C.pitch, marginLeft: 8 }}>{n.time}</Text>
+                </View>
+                <Text style={{ fontSize: 13, color: n.read ? C.faint : C.ink, marginTop: 2, lineHeight: 18 }} numberOfLines={2}>
+                  {n.body}
+                </Text>
+              </View>
+              {!n.read && <View style={st.dot} />}
+            </TouchableOpacity>
+          );
+        }}
+        ListEmptyComponent={
+          <View style={st.empty}>
+            <Ionicons name="notifications-off-outline" size={36} color={C.gray} />
+            <Text style={{ fontWeight: "800", color: C.ink, marginTop: 10 }}>Henüz bildirim yok</Text>
+            <Text style={{ color: C.faint, fontSize: 13, marginTop: 4, textAlign: "center" }}>
+              Başvurular, onaylar ve maç hatırlatmaları burada görünecek.
+            </Text>
+          </View>
+        }
+        ListFooterComponent={
+          <TouchableOpacity onPress={onSettings} style={st.footer}>
+            <Ionicons name="settings-outline" size={14} color={C.faint} />
+            <Text style={{ fontSize: 12, color: C.faint }}>Bildirim tercihlerini Ayarlar'dan yönet</Text>
+          </TouchableOpacity>
+        }
+      />
+    </View>
+  );
+}
+
+const mkSt = () => StyleSheet.create({
+  header: { backgroundColor: C.turf, flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 },
+  readAll: {
+    flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6,
+  },
+  row: {
+    flexDirection: "row", alignItems: "flex-start", gap: 12, backgroundColor: C.surface,
+    borderRadius: 16, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: C.line,
+  },
+  rowUnread: { borderColor: C.pitchSoft, backgroundColor: "#FBFFFC", borderLeftWidth: 3, borderLeftColor: C.pitch },
+  icon: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.pitch, marginTop: 6 },
+  empty: { alignItems: "center", padding: 32, marginTop: 20 },
+  footer: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 16 },
+});
+let st = mkSt();
+onThemeChange(() => { st = mkSt(); });

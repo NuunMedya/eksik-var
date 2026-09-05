@@ -1,0 +1,305 @@
+import React, { useState, useRef } from "react";
+import {
+  View, Text, TouchableOpacity, TextInput, FlatList,
+  KeyboardAvoidingView, Platform, StyleSheet,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { C } from "../theme";
+import { senderColor } from "../data";
+import { Avatar } from "../components";
+import { PollSheet } from "./sheets";
+import { pollVoters } from "../data";
+
+export default function ChatRoomScreen({
+  chat, apps, rules, onBack, onSend, onConfirmJoin, onGoChat, onCall, onInfo, onLineup,
+  onCreatePoll, onVote, onClosePoll,
+}) {
+  const [showPoll, setShowPoll] = useState(false);
+  const [input, setInput] = useState("");
+  const listRef = useRef(null);
+
+  const send = () => {
+    const t = input.trim();
+    if (!t) return;
+    onSend(chat.id, t);
+    setInput("");
+  };
+
+  const PollCard = ({ m }) => {
+    const poll = m.poll;
+    const total = pollVoters(poll);
+    const mine = new Set(Object.entries(poll.votes || {}).filter(([, vs]) => vs.some((v) => v.id === "me")).map(([id]) => id));
+    return (
+      <View style={st.pollCard}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <Ionicons name="stats-chart" size={16} color={C.turf} />
+          <Text style={{ flex: 1, fontWeight: "900", fontSize: 14, color: C.ink }}>{poll.question}</Text>
+        </View>
+        <Text style={{ fontSize: 11, color: C.faint, marginTop: 2, marginBottom: 8 }}>
+          {m.from === "me" ? "Sen" : m.name} · {poll.multiple ? "çoklu seçim" : "tek seçim"}{poll.closed ? " · kapandı" : ""}
+        </Text>
+        {poll.options.map((o) => {
+          const vs = (poll.votes && poll.votes[o.id]) || [];
+          const pct = total ? Math.round((vs.length / total) * 100) : 0;
+          const sel = mine.has(o.id);
+          return (
+            <TouchableOpacity key={o.id} disabled={poll.closed} onPress={() => onVote && onVote(chat.id, poll.id, o.id, !sel)} style={st.pollOpt}>
+              <View style={[st.pollBar, { width: `${Math.max(pct, 4)}%`, backgroundColor: sel ? C.pitch : C.pitchSoft }]} />
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, padding: 10 }}>
+                <Ionicons name={sel ? (poll.multiple ? "checkbox" : "radio-button-on") : (poll.multiple ? "square-outline" : "radio-button-off")} size={18} color={sel ? "#fff" : C.turf} />
+                <Text style={{ flex: 1, fontWeight: "800", fontSize: 13, color: sel ? "#fff" : C.ink }}>{o.text}</Text>
+                <Text style={{ fontSize: 12, fontWeight: "900", color: sel ? "#fff" : C.turf }}>{vs.length} · %{pct}</Text>
+              </View>
+              {vs.length > 0 && (
+                <Text style={{ fontSize: 10, color: sel ? "rgba(255,255,255,0.85)" : C.faint, paddingHorizontal: 10, paddingBottom: 6, marginTop: -4 }} numberOfLines={1}>
+                  {vs.slice(0, 3).map((v) => (v.id === "me" ? "Sen" : v.name.split(" ")[0])).join(", ")}{vs.length > 3 ? ` +${vs.length - 3}` : ""}
+                </Text>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
+          <Text style={{ fontSize: 11, color: C.faint }}>{total} kişi oy verdi</Text>
+          {poll.createdBy === "me" && !poll.closed && onClosePoll && (
+            <TouchableOpacity onPress={() => onClosePoll(chat.id, poll.id)}><Text style={{ fontSize: 11, fontWeight: "800", color: C.kit }}>Anketi kapat</Text></TouchableOpacity>
+          )}
+        </View>
+      </View>
+    );
+  };
+
+  const renderMsg = ({ item: m }) => {
+    if (m.poll) return <View style={{ marginVertical: 6 }}><PollCard m={m} /></View>;
+    if (m.from === "sys")
+      return (
+        <View style={{ alignItems: "center", marginVertical: 4 }}>
+          <View style={st.sysPill}>
+            <Text style={{ fontSize: 11, fontWeight: "600", color: "#6B5E2E", textAlign: "center" }}>
+              {m.text}
+            </Text>
+          </View>
+        </View>
+      );
+
+    if (m.from === "approval") {
+      const app = apps.find((a) => a.id === m.appId);
+      const done = app?.status === "onaylandi";
+      const invited = !!(app && app.invited);
+      const offer = !!(app && app.fromWaitlist);
+      return (
+        <View style={{ alignItems: "flex-start", marginVertical: 4 }}>
+          <View style={st.approvalCard}>
+            <View style={[st.approvalHead, { backgroundColor: done ? C.turf : C.pitch }]}>
+              <Text style={{ color: "#fff", fontWeight: "900", fontSize: 11, letterSpacing: 0.4 }}>
+                {done ? "KADRODASIN 🎉" : offer ? "YER AÇILDI ⏳" : invited ? "KADROYA DAVET EDİLDİN 🎉" : "ORGANİZATÖR ONAYI GELDİ ✅"}
+              </Text>
+            </View>
+            <View style={{ padding: 12 }}>
+              <Text style={{ fontSize: 13, color: C.ink, lineHeight: 19 }}>
+                {done
+                  ? "Yerin kesinleşti ve grup sohbetine eklendin. Maçta görüşürüz!"
+                  : offer ? `Yedek listesinden sıra sana geldi. ${app.offerExpiresAt ? app.offerExpiresAt + "'ye kadar" : "Süresi içinde"} onaylarsan yerin kesinleşir; yoksa sıradaki yedeğe geçer.`
+                  : invited ? "Organizatör seni doğrudan kadroya davet etti. Kabul edersen yerin kesinleşir; istemiyorsan etkinlik sayfasından reddedebilirsin."
+                  : "Organizatör seni kadroya almak istiyor. Son onayı verirsen yerin kesinleşir ve kontenjan güncellenir."}
+              </Text>
+              {done ? (
+                <TouchableOpacity
+                  onPress={() => onGoChat("g-" + app.eventId)}
+                  style={[st.approvalBtn, { backgroundColor: C.pitchSoft }]}
+                >
+                  <Text style={{ color: C.turf, fontWeight: "900", fontSize: 13 }}>Grup sohbetine git</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  onPress={() => onConfirmJoin(m.appId)}
+                  style={[st.approvalBtn, { backgroundColor: C.pitch }]}
+                >
+                  <Text style={{ color: "#fff", fontWeight: "900", fontSize: 13 }}>
+                    {offer ? "Yerimi onayla" : invited ? "Daveti kabul et" : "Onayla ve kadroya katıl"}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+      );
+    }
+
+    const mine = m.from === "me";
+    return (
+      <View style={{ alignItems: mine ? "flex-end" : "flex-start", marginVertical: 3 }}>
+        <View
+          style={[
+            st.bubble,
+            {
+              backgroundColor: mine ? C.waMine : "#fff",
+              borderTopRightRadius: mine ? 4 : 16,
+              borderTopLeftRadius: mine ? 16 : 4,
+            },
+          ]}
+        >
+          {!mine && chat.type === "grup" && m.name && (
+            <Text style={{ fontSize: 11, fontWeight: "900", color: senderColor(m.from) }}>
+              {m.name}
+            </Text>
+          )}
+          <Text style={{ fontSize: 14, color: C.ink }}>{m.text}</Text>
+          <View style={{ flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: 3, marginTop: 2 }}>
+            <Text style={{ fontSize: 10, color: "#8CA096" }}>{m.time}</Text>
+            {mine && <Ionicons name="checkmark-done" size={13} color="#4FB6E0" />}
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 44 : 0}
+    >
+      <View style={st.header}>
+        <TouchableOpacity onPress={onBack} style={{ paddingRight: 6 }}>
+          <Ionicons name="chevron-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={onInfo} style={{ flex: 1, flexDirection: "row", alignItems: "center" }}>
+          {chat.type === "grup" ? (
+            <View style={st.groupIcon}>
+              <Ionicons name="people" size={17} color="#fff" />
+            </View>
+          ) : (
+            <Avatar name={chat.title} size={36} />
+          )}
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text numberOfLines={1} style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>
+              {chat.title}
+            </Text>
+            <Text style={{ color: C.mist, fontSize: 11 }}>
+              {chat.type === "grup"
+                ? `${chat.members ? chat.members.length + " üye" : chat.sub} · bilgi için dokun`
+                : chat.sub || "profil için dokun"}
+            </Text>
+          </View>
+        </TouchableOpacity>
+        {chat.type === "grup" && onLineup && (chat.members || []).length >= 4 && (
+          <TouchableOpacity onPress={onLineup} style={st.callBtn}>
+            <Ionicons name="shuffle" size={20} color="#fff" />
+          </TouchableOpacity>
+        )}
+        {chat.type === "birebir" && (
+          <TouchableOpacity
+            onPress={onCall}
+            style={[st.callBtn, rules && !rules.canCall && { opacity: 0.35 }]}
+          >
+            <Ionicons name="call" size={20} color="#fff" />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <FlatList
+        ref={listRef}
+        data={chat.msgs}
+        keyExtractor={(m) => m.id}
+        renderItem={renderMsg}
+        style={{ backgroundColor: C.waBg }}
+        contentContainerStyle={{ padding: 10, paddingBottom: 16 }}
+        onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
+        onLayout={() => listRef.current?.scrollToEnd({ animated: false })}
+      />
+
+      {rules && !rules.canMessage ? (
+        <View style={st.blockedBar}>
+          <Ionicons name="lock-closed-outline" size={16} color={C.faint} />
+          <Text style={st.blockedText}>{rules.messageReason}</Text>
+          {rules.canCall && (
+            <TouchableOpacity onPress={onCall} style={st.blockedCall}>
+              <Ionicons name="call" size={14} color="#fff" />
+              <Text style={{ color: "#fff", fontWeight: "800", fontSize: 13 }}>Ara</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      ) : (
+        <View style={st.inputBar}>
+          {chat.type === "grup" && onCreatePoll && (
+            <TouchableOpacity onPress={() => setShowPoll(true)} style={st.pollBtn}>
+              <Ionicons name="stats-chart-outline" size={20} color={C.turf} />
+            </TouchableOpacity>
+          )}
+          <TextInput
+            value={input}
+            onChangeText={setInput}
+            placeholder="Mesaj yaz…"
+            placeholderTextColor="#9AA79F"
+            style={st.input}
+            onSubmitEditing={send}
+            returnKeyType="send"
+          />
+          <TouchableOpacity onPress={send} style={st.sendBtn}>
+            <Ionicons name="send" size={17} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      )}
+      <PollSheet visible={showPoll} onClose={() => setShowPoll(false)} onSend={(q, options, multiple) => { setShowPoll(false); onCreatePoll(chat.id, q, options, multiple); }} />
+    </KeyboardAvoidingView>
+  );
+}
+
+const st = StyleSheet.create({
+  header: {
+    backgroundColor: C.turf, flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 10, paddingVertical: 10,
+  },
+  groupIcon: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center", justifyContent: "center",
+  },
+  sysPill: {
+    backgroundColor: C.waNotice, borderRadius: 10,
+    paddingHorizontal: 10, paddingVertical: 5, maxWidth: "85%",
+  },
+  approvalCard: {
+    backgroundColor: "#fff", borderRadius: 16, overflow: "hidden",
+    maxWidth: "88%", elevation: 1,
+    shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 1 },
+  },
+  approvalHead: { paddingHorizontal: 12, paddingVertical: 8 },
+  approvalBtn: { borderRadius: 12, alignItems: "center", paddingVertical: 9, marginTop: 10 },
+  bubble: {
+    borderRadius: 16, paddingHorizontal: 10, paddingVertical: 7, maxWidth: "80%",
+    elevation: 1,
+    shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 2, shadowOffset: { width: 0, height: 1 },
+  },
+  inputBar: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    backgroundColor: "#fff", borderTopWidth: 1, borderTopColor: C.line, padding: 10,
+  },
+  input: {
+    flex: 1, backgroundColor: "#fff", borderWidth: 1, borderColor: C.line,
+    borderRadius: 999, paddingHorizontal: 16, paddingVertical: 9,
+    fontSize: 14, color: C.ink,
+  },
+  sendBtn: {
+    width: 40, height: 40, borderRadius: 20, backgroundColor: C.pitch,
+    alignItems: "center", justifyContent: "center",
+  },
+  pollBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.pitchSoft, alignItems: "center", justifyContent: "center", marginRight: 8 },
+  pollCard: { backgroundColor: "#fff", borderRadius: 16, padding: 12, borderWidth: 1, borderColor: C.line, maxWidth: "92%", alignSelf: "flex-start", minWidth: "80%" },
+  pollOpt: { borderRadius: 12, overflow: "hidden", backgroundColor: C.chalk, marginBottom: 6 },
+  pollBar: { position: "absolute", left: 0, top: 0, bottom: 0 },
+  callBtn: {
+    width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center", justifyContent: "center", marginLeft: 6,
+  },
+  blockedBar: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    backgroundColor: "#fff", borderTopWidth: 1, borderTopColor: C.line,
+    paddingHorizontal: 14, paddingVertical: 12,
+  },
+  blockedText: { flex: 1, fontSize: 13, color: C.faint, fontWeight: "600" },
+  blockedCall: {
+    flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: C.pitch,
+    borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8,
+  },
+});
