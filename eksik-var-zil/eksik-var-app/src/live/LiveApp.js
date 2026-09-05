@@ -13,7 +13,7 @@ import { useDeepLink } from "../deeplink";
 import { copyText } from "../clipboard";
 import { pickPhoto } from "../avatar";
 import { addToCalendar } from "../calendar";
-import { Linking, Modal } from "react-native";
+import { Linking } from "react-native";
 import { t, onLangChange } from "../i18n";
 import { saveTheme, saveLang } from "../prefs";
 import { Toast, PickerSheet } from "../components";
@@ -355,11 +355,7 @@ export default function LiveApp() {
           setCall((c) => {
             if (!c || c.callId !== r.id) return c;
             if (r.status === "cevaplandi" && !r.ended_at) return { ...c, status: "bağlandı" };
-            if (r.ended_at || r.status === "cevapsiz" || r.status === "reddedildi") {
-              const sn = (r.answered_at && r.ended_at) ? Math.max(1, Math.round((new Date(r.ended_at) - new Date(r.answered_at)) / 1000)) : 0;
-              callIz(c.convId, sn);
-              return null;
-            }
+            if (r.ended_at || r.status === "cevapsiz" || r.status === "reddedildi") return null;
             return c;
           });
         }
@@ -577,19 +573,10 @@ export default function LiveApp() {
     if (!hedef) { showToast(t("Sesli arama yakında geliyor — şimdilik mesajlaşabilirsin")); return; }
     try {
       const row = await api.logCall(meId, hedef);
-      setCall({ callId: row.id, live: true, status: "aranıyor", name: c.title, avatar: c.other && c.other.avatar, convId: c.id });
+      setCall({ callId: row.id, live: true, status: "aranıyor", name: c.title, avatar: c.other && c.other.avatar });
     } catch (e) { fail(e); }
   };
-  const callIz = (convId, sn) => {
-    if (!convId) return;
-    const metin = sn > 0 ? `\u{1F4DE} Sesli arama \u00B7 ${Math.floor(sn / 60)}:${String(sn % 60).padStart(2, "0")}` : "\u260E\uFE0F Cevapsız arama";
-    api.sendMessage(meId, convId, metin).catch(() => {});
-  };
-  const endCall = (seconds) => {
-    if (call && call.callId) Promise.resolve(api.endCall(call.callId, seconds > 0)).catch(() => {});
-    if (call) callIz(call.convId, seconds);
-    setCall(null);
-  };
+  const endCall = (seconds) => { if (call && call.callId) api.endCall(call.callId, seconds > 0); setCall(null); };
   const saveAttendance = async (eventId, marks) => {
     try {
       const r = await api.saveAttendance(eventId, marks);
@@ -1010,7 +997,7 @@ export default function LiveApp() {
                 onMute={muteChat} season={seasons[infoChat.id] || null} />
             </View>
           )}
-          {call && (<Modal visible animationType="fade" onRequestClose={() => {}}><CallScreen call={call} onEnd={endCall} onAnswer={call.status === "gelen" ? async () => { try { await api.answerCall(call.callId); setCall((c) => c && { ...c, status: "bağlandı" }); } catch (e) { fail(e); } } : null} /></Modal>)}
+          {call && (<View style={StyleSheet.absoluteFill}><CallScreen call={call} onEnd={endCall} onAnswer={call.status === "gelen" ? async () => { try { await api.answerCall(call.callId); setCall((c) => c && { ...c, status: "bağlandı" }); } catch (e) { fail(e); } } : null} /></View>)}
 
           {memberSheet && (
             <MemberSheet member={memberSheet.member} rules={rulesForMember(memberSheet.member)}

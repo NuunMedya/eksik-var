@@ -13,7 +13,7 @@ import { useDeepLink } from "../deeplink";
 import { copyText } from "../clipboard";
 import { pickPhoto } from "../avatar";
 import { addToCalendar } from "../calendar";
-import { Linking, Modal } from "react-native";
+import { Linking } from "react-native";
 import { t, onLangChange } from "../i18n";
 import { saveTheme, saveLang } from "../prefs";
 import { Toast, PickerSheet } from "../components";
@@ -1010,7 +1010,7 @@ export default function LiveApp() {
                 onMute={muteChat} season={seasons[infoChat.id] || null} />
             </View>
           )}
-          {call && (<Modal visible animationType="fade" onRequestClose={() => {}}><CallScreen call={call} onEnd={endCall} onAnswer={call.status === "gelen" ? async () => { try { await api.answerCall(call.callId); setCall((c) => c && { ...c, status: "bağlandı" }); } catch (e) { fail(e); } } : null} /></Modal>)}
+          {call && (<View style={StyleSheet.absoluteFill}><CallScreen call={call} onEnd={endCall} onAnswer={call.status === "gelen" ? async () => { try { await api.answerCall(call.callId); setCall((c) => c && { ...c, status: "bağlandı" }); } catch (e) { fail(e); } } : null} /></View>)}
 
           {memberSheet && (
             <MemberSheet member={memberSheet.member} rules={rulesForMember(memberSheet.member)}
