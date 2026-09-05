@@ -1,18 +1,44 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
-  View, Text, TouchableOpacity, Share, ActivityIndicator, Image,
+  View, Text, TouchableOpacity, Share, BackHandler, ActivityIndicator, Image,
   StyleSheet,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
-import { C } from "../theme";
-import { contactRules, DEFAULT_SETTINGS, buildShareText, buildInviteText, REPORT_REASONS, memberFromOrg, openPositions } from "../data";
+import { C, onThemeChange } from "../theme";
+import { contactRules, DEFAULT_SETTINGS, buildShareText, buildInviteText, buildTeamInvite, extractIban, guestPlayers, buildMatchSummary, REPORT_REASONS, memberFromOrg, openPositions } from "../data";
 import { useDeepLink } from "../deeplink";
+import { copyText } from "../clipboard";
+import { pickPhoto } from "../avatar";
+import { addToCalendar } from "../calendar";
+import { Linking } from "react-native";
+import { t, onLangChange } from "../i18n";
+import { saveTheme, saveLang } from "../prefs";
 import { Toast, PickerSheet } from "../components";
 import { Alert } from "react-native";
 import * as api from "./api";
+import { DEFAULT_SPONSORS } from "../sponsors";
+import { cloneForRepeat, CATEGORIES } from "../data";
+import PostComposer from "../screens/PostComposer";
+import { yolSec } from "../yol";
+import VenueSheet from "../screens/VenueSheet";
+import HubScreen from "../screens/HubScreen";
+import PenaltyScreen from "../screens/PenaltyScreen";
+import KadroDeneScreen from "../screens/KadroDeneScreen";
+import OyunSalonuScreen from "../screens/OyunSalonuScreen";
+import MaclarimScreen from "../screens/MaclarimScreen";
+import BasketScreen from "../screens/BasketScreen";
+import OffersScreen from "../screens/OffersScreen";
+import ClubBoardScreen from "../screens/ClubBoardScreen";
+import TakimScreen from "../screens/TakimScreen";
+import ArenaScreen from "../screens/ArenaScreen";
+import TeamKurModal from "../screens/TeamKurModal";
+import CommentsSheet from "../screens/CommentsSheet";
+import NewChatModal from "../screens/NewChatModal";
+import VolleyScreen from "../screens/VolleyScreen";
+import TennisScreen from "../screens/TennisScreen";
 import { registerForPush, onNotificationTap } from "../push";
 import AuthScreen from "../screens/AuthScreen";
 import HomeScreen from "../screens/HomeScreen";
@@ -31,11 +57,44 @@ import BlockedScreen from "../screens/BlockedScreen";
 import UserProfileScreen from "../screens/UserProfileScreen";
 import LineupScreen from "../screens/LineupScreen";
 import SearchScreen from "../screens/SearchScreen";
+import EditProfileScreen from "../screens/EditProfileScreen";
+import OnboardingScreen from "../screens/OnboardingScreen";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ApplySheet } from "../screens/sheets";
 
 // Hata mesajlarını kullanıcı diline çevir
+// Sunucunun (supabase/setup.sql) döndürdüğü hata anahtarları → kullanıcı mesajı
+const HATA_MESAJI = {
+  cok_hizli:            "Biraz yavaş 🙂 Kısa bir ara verip tekrar dene",
+  cok_hizli_ilan:       "Bugünlük ilan hakkın doldu (günde 5) — yarın devam",
+  cok_fazla_acik_ilan:  "Aynı anda en fazla 10 açık ilanın olabilir — önce birini kapat",
+  cok_hizli_basvuru:    "Bugünlük başvuru hakkın doldu — yarın tekrar dene",
+  engellendi:           "Bu kişiyle aranızda engel var",
+  kadro_dolu:           "Kontenjan doldu — yedek listesine girebilirsin",
+  yetki_yok:            "Bu işlem için yetkin yok",
+  kapali_hesap:         "Hesabın şu an işlem yapamıyor. Bilgi için destek@eksikvar.app",
+  kapali_ilan:          "Bu etkinlik başvuruya kapalı",
+  zaten_kadroda:        "Zaten kadrodasın",
+  zaten_sikayet:        "Bu kişiyi bugün zaten şikayet ettin — ekip inceliyor",
+  gecmis_tarih:         "Geçmiş bir tarihe ilan açılamaz",
+  kendi_ilanin:         "Kendi ilanına başvuramazsın",
+  bulunamadi:           "Kayıt bulunamadı — sayfayı yenileyip tekrar dene",
+  gecersiz:             "Geçersiz değer",
+  mac_tamamlanmadi:     "Maç henüz tamamlanmadı",
+  mac_oynanmadi:        "Maç saati gelmeden tamamlanamaz",
+  oylama_kapandi:       "MVP oylaması kapandı",
+  yedek_kapali:         "Yedek listesi yalnızca kadro dolunca açılır",
+  kod_hatali:           "Kod yanlış",
+  kod_kapali:           "Organizatör henüz kodu açmadı",
+  erken:                "Sahadayım işareti maç saatine yakın kullanılabilir",
+  iban_yok:             "Önce Ayarlar > Ödeme bilgileri'ne IBAN'ını yaz",
+  grup_yok:             "Bu maçın grup sohbeti bulunamadı",
+};
+
 const friendly = (e) => {
   const m = (e && e.message) || String(e);
+  if (HATA_MESAJI[m.trim()]) return HATA_MESAJI[m.trim()];
+  if (m.includes("row-level security")) return "Bu işlem için yetkin yok";
   if (m.includes("MESAJ_IZNI_YOK")) return "Karşı tarafın iletişim tercihleri bu mesaja izin vermiyor";
   if (m.includes("Kontenjan dolu")) return "Kontenjan doldu";
   if (m.includes("başvuruya kapalı")) return "Bu etkinlik başvuruya kapalı";
@@ -54,6 +113,10 @@ const friendly = (e) => {
   if (m.includes("TAKIM_ADI")) return "Takım adı gerekli";
   if (m.includes("MAC_TAMAMLANMADI")) return "Maç henüz tamamlanmadı";
   if (m.includes("IBAN_YOK")) return "Önce Ayarlar > Ödeme bilgileri'ne IBAN'ını yaz";
+  if (m.includes("ZAMAN_DISI")) return "Maçtan 2-3 saat önce ile 4 saat sonra arasında kullanılabilir";
+  if (m.includes("KOD_YANLIS")) return "Kod yanlış";
+  if (m.includes("KOD_YOK")) return "Organizatör henüz kodu açmadı";
+  if (m.includes("YOKLAMA_GEC")) return "Yoklama 30 gün sonra değiştirilemez";
   if (m.includes("ODEME_YOK")) return "Bu maç için ödeme kaydı yok";
   if (m.includes("OYLAMA_KAPANDI")) return "MVP oylaması kapandı";
   if (m.includes("MACTA_DEGILSIN")) return "Bu maçta oynamadığın için oy veremezsin";
@@ -78,8 +141,94 @@ export default function LiveApp() {
   const [apps, setApps] = useState([]);
   const [chats, setChats] = useState([]);
   const [notifs, setNotifs] = useState([]);
+  const [sponsors, setSponsors] = useState(DEFAULT_SPONSORS);   // panel listesi varsayılanı ezer
+  const [posts, setPosts] = useState([]);
+  const [composer, setComposer] = useState(false);
+  const [postBusy, setPostBusy] = useState(false);
+  const refreshPosts = async () => { try { setPosts(await api.listPosts(meId, user.city)); } catch { /* sessiz */ } };
+  const likePost = async (p) => {
+    const liked = (p.likes || []).includes("me");
+    setPosts((ps) => ps.map((x) => x.id !== p.id ? x : { ...x, likes: liked ? x.likes.filter((l) => l !== "me") : [...x.likes, "me"] }));
+    try { await api.togglePostLike(meId, p.id, liked); } catch { refreshPosts(); }
+  };
+  const sharePost = async (f) => {
+    if (postBusy) return;
+    setPostBusy(true);
+    try { await api.createPost(meId, user, f); setComposer(false); await refreshPosts(); showToast(t("Paylaşıldı! 🎉")); }
+    catch (e) { fail(e); } finally { setPostBusy(false); }
+  };
+  const [offers, setOffers] = useState([]);
+  const [clubRows, setClubRows] = useState([]);
+  const [myTeamRow, setMyTeamRow] = useState(null);
+  const [teamKur, setTeamKur] = useState(null);          // { sonra }
+  const [yeniSohbet, setYeniSohbet] = useState(null);   // 'kisi' | 'grup'
+  const [sohbetBusy, setSohbetBusy] = useState(false);
+  const sohbetAyar = async (c, patch, mesaj) => {
+    try { await api.setChatFlags(meId, c.id, patch); await refreshChats(); if (mesaj) showToast(mesaj); }
+    catch (e) { fail(e); }
+  };
+  const [yorumlar, setYorumlar] = useState(null);
+  const acYorumlar = async (p) => {
+    setYorumlar({ post: p, rows: [], busy: true });
+    try { setYorumlar({ post: p, rows: await api.listComments(p.id), busy: false }); }
+    catch (e) { setYorumlar(null); fail(e); }
+  };
+  const refreshOffers = async () => { try { setOffers(await api.myOffers(meId)); } catch { /* sessiz */ } };
+  const [takimUyeler, setTakimUyeler] = useState([]);
+  const refreshTakim = async () => { try {
+    const tk = await api.myTeam(meId);
+    setMyTeamRow(tk);
+    setTakimUyeler(tk ? await api.teamMembers(tk.id) : []);
+  } catch { /* sessiz */ } };
+  const refreshClub = async () => { try {
+    const [rows, tk] = await Promise.all([api.listClub(user.city), api.myTeam(meId)]);
+    setClubRows(rows); setMyTeamRow(tk);
+  } catch { /* sessiz */ } };
+  const teklifGonder = async (p) => { try {
+    await api.createOffer(meId, { kind: "oyuncu", toUser: p.userId, message: t("💌 Merhaba {p0}! Vitrinini beğendik, takımımızda oynamanı isteriz.", { p0: (p.name || "").split(" ")[0] }) });
+    showToast(t("💌 Teklif gönderildi — Tekliflerim'den takip et"));
+  } catch (e) { fail(e); } };
+  const takimDaveti = async (kisi, tk) => { try {
+    await api.createOffer(meId, { kind: "takim", toUser: kisi.id, teamId: tk.id, message: t("🏆 {p0} seni kadrosuna davet ediyor!", { p0: tk.name }) });
+    showToast(t("🏆 Takım daveti gönderildi"));
+  } catch (e) { fail(e); } };
+  const removePost = (p) => Alert.alert(t("Gönderiyi sil?"), "", [
+    { text: t("Vazgeç"), style: "cancel" },
+    { text: t("Sil"), style: "destructive", onPress: async () => { try { await api.deletePost(p.id); await refreshPosts(); showToast(t("Gönderi silindi")); } catch (e) { fail(e); } } },
+  ]);
+  const [market, setMarket] = useState([]);
+  const [myListing, setMyListing] = useState(null);
+  const refreshMarket = async () => {
+    try { setMarket(await api.listMarket(meId, user.city)); setMyListing(await api.myListing(meId)); } catch { /* sessiz */ }
+  };
+  const saveListing = async (f) => { try { await api.upsertListing(meId, user, f); await refreshMarket(); showToast(t("Vitrindesin! Takımlar seni görebilir 🏪")); } catch (e) { fail(e); } };
+  const dropListing = async () => { try { await api.closeListing(meId); await refreshMarket(); showToast(t("Vitrinden indin")); } catch (e) { fail(e); } };
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [tab, setTab] = useState("home");
+  const [homeKind, setHomeKind] = useState("oyuncu");
+  const [venueHub, setVenueHub] = useState(false);
+  const [hubCat, setHubCat] = useState(1);
+  const hubGo = (k) => {
+    if (k === "create") setView({ name: "create" });
+    else if (k === "kadro") setView({ name: "kadroDene" });
+    else if (k === "oyunlar") setView({ name: "oyunlar" });
+    else if (k === "maclarim") setView({ name: "maclarim" });
+    else if (k === "penalti") setView({ name: "penalti" });
+    else if (k === "basket") setView({ name: "basket" });
+    else if (k === "arena") setView({ name: "arena" });
+    else if (k === "takim") { refreshTakim(); setView({ name: "takim" }); }
+    else if (k === "teklifler") { refreshOffers(); setView({ name: "teklifler" }); }
+    else if (k === "kulup") { refreshClub(); setView({ name: "kulup" }); }
+    else if (k === "voleybol") setView({ name: "voleybol" });
+    else if (k === "tenis") setView({ name: "tenis" });
+    else if (k === "pazar") { setHomeKind("pazar"); setTab("home"); setView({ name: "root" }); }
+    else if (k === "rakip") { setHomeKind("rakip"); setTab("home"); setView({ name: "root" }); }
+    else if (k === "kesfet") { setTab("search"); setView({ name: "root" }); }
+    else if (k === "vitrin") setView({ name: "editProfile", bolum: "vitrin" });
+    else if (k === "sahalar") setVenueHub(true);
+    else showToast(t("Çok yakında 🏗"));
+  };
+
   const [view, setView] = useState({ name: "root" });
   const [call, setCall] = useState(null);
   const [memberSheet, setMemberSheet] = useState(null);
@@ -88,6 +237,16 @@ export default function LiveApp() {
   const [ratedEvents, setRatedEvents] = useState([]);
   const [mvpVotes, setMvpVotes] = useState({});
   const [paymentDetails, setPaymentDetails] = useState(null);
+  const [profileBusy, setProfileBusy] = useState(false);
+  const [onboarded, setOnboarded] = useState(null); // null = okunuyor
+  const [loading, setLoading] = useState(true);
+  const [offline, setOffline] = useState(false);
+  const cacheTimer = useRef(null);
+  const saveCache = (ev, ch) => { if (cacheTimer.current) clearTimeout(cacheTimer.current); cacheTimer.current = setTimeout(() => AsyncStorage.setItem("ev_cache", JSON.stringify({ events: ev.slice(0, 60), chats: ch.slice(0, 30).map((c) => ({ ...c, msgs: c.msgs.slice(-30) })), ts: Date.now() })).catch(() => {}), 800); };
+  useEffect(() => { if (me) saveCache(events, chats); }, [events, chats]);  
+  useEffect(() => { AsyncStorage.getItem("ev_onboarded").then((v) => setOnboarded(!!v)).catch(() => setOnboarded(true)); }, []);
+  const finishOnboarding = () => { setOnboarded(true); AsyncStorage.setItem("ev_onboarded", "1").catch(() => {}); };
+  const [profileError, setProfileError] = useState(null);
   const [reportTarget, setReportTarget] = useState(null);
   const [profile, setProfile] = useState(null); // { user, comments, loading }
   const [recentSearches, setRecentSearches] = useState([]);
@@ -97,6 +256,9 @@ export default function LiveApp() {
   const viewRef = useRef(view);
   const timers = useRef([]);
   useEffect(() => { viewRef.current = view; }, [view]);
+  const activeEventRef = useRef(null);
+  const infoChatRef = useRef(null);
+  const chatDebounce = useRef(null);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   // Derin bağlantı: kullanıcı ve etkinlikler hazır olunca ilgili etkinliği aç
   const [pendingLink, setPendingLink] = useState(null);
@@ -104,8 +266,28 @@ export default function LiveApp() {
   useEffect(() => {
     if (!pendingLink || !me) return;
     if (events.some((e) => e.id === pendingLink)) { setTab("home"); setView({ name: "event", id: pendingLink }); setPendingLink(null); }
-    else if (events.length) { showToast("Bu etkinlik artık açık değil"); setPendingLink(null); }
-  }, [pendingLink, me, events]); // eslint-disable-line
+    else if (events.length) { showToast(t("Bu etkinlik artık açık değil")); setPendingLink(null); }
+  }, [pendingLink, me, events]);  
+  // Android geri tuşu: açık kaplamayı kapat, sohbetten listeye dön, ana sayfadaysan sistem davranışı
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      const v = viewRef.current;
+      if (call) { return true; }                                   // arama ekranı: geri tuşu yok
+      if (memberSheet) { setMemberSheet(null); return true; }
+      if (v.name === "root") { if (tab !== "home") { setTab("home"); return true; } return false; }
+      if (v.name === "chat") { setView({ name: "root" }); return true; }
+      if (v.name === "groupInfo" || v.name === "lineup") { setView({ name: "chat", id: v.id }); return true; }
+      if (v.name === "attendance" || v.name === "rate" || v.name === "apply") { setView({ name: "event", id: v.id }); return true; }
+      if (v.name === "blocked") { setView({ name: "settings" }); return true; }
+      setView({ name: "root" }); return true;
+    });
+    return () => sub.remove();
+  }, [tab, call, memberSheet]);
+
+  // Tema / dil değişince tüm ağacı yeniden çiz
+  const [, setUiVersion] = useState(0);
+  useEffect(() => { const a = onThemeChange(() => setUiVersion((v) => v + 1)); const b = onLangChange(() => setUiVersion((v) => v + 1)); return () => { a(); b(); }; }, []);
+
   const showToast = (msg) => { setToast(msg); timers.current.push(setTimeout(() => setToast(null), 3000)); };
   const fail = (e) => showToast(friendly(e));
   const meId = me ? me.id : null;
@@ -126,7 +308,11 @@ export default function LiveApp() {
     return p;
   }, []);
 
-  const refreshEvents = useCallback(async (p) => { const prof = p || me; if (prof) setEvents(await api.listEvents(prof.id, prof.cityId)); }, [me]);
+  const refreshEvents = useCallback(async (p) => {
+    const prof = p || me; if (!prof) return;
+    try { setEvents(await api.listEvents(prof.id, prof.cityId)); setOffline(false); }
+    catch (e) { if (String(e && e.message).includes("Network")) { setOffline(true); return; } throw e; }
+  }, [me]);
   const refreshApps = useCallback(async (uid) => { const id = uid || meId; if (id) { const a = await api.listApplications(id); setApps(a); return a; } return []; }, [meId]);
   const refreshChats = useCallback(async (uid, appList) => {
     const id = uid || meId; if (!id) return;
@@ -137,14 +323,19 @@ export default function LiveApp() {
   useEffect(() => {
     if (!session) { setMe(null); return; }
     (async () => {
+      try { const raw = await AsyncStorage.getItem("ev_cache"); if (raw) { const c = JSON.parse(raw); if (c.events) setEvents(c.events); if (c.chats) setChats(c.chats); } } catch { /* sessiz */ }
       try {
         const p = await loadProfile(session.user.id);
         const a = await refreshApps(p.id);
         await Promise.all([refreshEvents(p), refreshChats(p.id, a), api.listNotifications().then(setNotifs),
           api.listBlocked(p.id).then(setBlocked).catch(() => {}), api.listRatedEventIds(p.id).then(setRatedEvents).catch(() => {}),
           api.myMvpVotes(p.id).then(setMvpVotes).catch(() => {}), api.getPaymentDetails(p.id).then(setPaymentDetails).catch(() => {}),
-          api.paymentStats(p.id).then((ps) => ps && setMe((m) => (m ? { ...m, paymentStats: ps } : m))).catch(() => {})]);
-      } catch (e) { fail(e); }
+          api.paymentStats(p.id).then((ps) => ps && setMe((m) => (m ? { ...m, paymentStats: ps } : m))).catch(() => {}),
+          api.playerTotals(p.id).then((t) => t && setMe((m) => (m ? { ...m, totals: t } : m))).catch(() => {}),
+          api.listSavedVenues(p.id).then((v) => setMe((m) => (m ? { ...m, savedVenues: v } : m))).catch(() => {})]);
+        setOffline(false);
+      } catch (e) { if (String(e && e.message).includes("Network")) setOffline(true); else fail(e); }
+      finally { setLoading(false); }
     })();
   }, [session]);
 
@@ -170,12 +361,14 @@ export default function LiveApp() {
         });
       },
       onChange: async (what) => {
+        if (what === "posts") { refreshPosts(); return; }
+        if (what === "offers") { refreshOffers(); try { setNotifs(await api.listNotifications()); } catch { /* sessiz */ } return; }
+        if (what === "chats") { if (chatDebounce.current) clearTimeout(chatDebounce.current); chatDebounce.current = setTimeout(async () => { try { await refreshChats(); await refreshEvents(); } catch { /* sessiz */ } }, 400); return; }
         try {
           if (what === "applications") { const a = await refreshApps(); await Promise.all([refreshEvents(), refreshChats(undefined, a)]); }
           else if (what === "events") await refreshEvents();
-          else if (what === "chats") { await refreshChats(); await refreshEvents(); }
           else if (what === "notifications") setNotifs(await api.listNotifications());
-        } catch (e) { /* sessiz */ }
+        } catch { /* sessiz */ }
       },
     });
     return unsub;
@@ -183,16 +376,26 @@ export default function LiveApp() {
 
   /* ---------- push: belirteci kaydet, dokununca yönlendir ---------- */
   const [pushTap, setPushTap] = useState(null);
+  const pushAsked = useRef(false);
+  const askPush = async () => {          // ilk kadroya giriş / ilk ilan sonrasında, gerekçesiyle
+    if (pushAsked.current || !meId) return; pushAsked.current = true;
+    const flag = await AsyncStorage.getItem("ev_push_asked").catch(() => null);
+    if (flag) { const token = await registerForPush(); if (token) api.savePushToken(meId, token); return; }
+    Alert.alert(t("Maçı kaçırma"), t("Başvurun onaylanınca, kadro dolunca ve maça 2 saat kala haber verelim mi?"), [
+      { text: t("Şimdi değil"), style: "cancel", onPress: () => { pushAsked.current = false; } },
+      { text: t("Evet, bildir"), onPress: async () => { AsyncStorage.setItem("ev_push_asked", "1").catch(() => {}); const token = await registerForPush(); if (token) api.savePushToken(meId, token); } },
+    ]);
+  };
   useEffect(() => {
     if (!meId) return;
-    registerForPush().then((token) => { if (token) api.savePushToken(meId, token); });
+    AsyncStorage.getItem("ev_push_asked").then((f) => { if (f) registerForPush().then((token) => { if (token) api.savePushToken(meId, token); }); }).catch(() => {});
     return onNotificationTap((data) => setPushTap({ ...data, t: Date.now() }));
   }, [meId]);
   useEffect(() => {
     if (!pushTap || !meId) return;
     openNotif({ id: "push", type: pushTap.type, data: pushTap });
     setPushTap(null);
-  }, [pushTap, meId, chats, events]); // eslint-disable-line
+  }, [pushTap, meId, chats, events]);  
 
   /* ---------- kimlik ---------- */
   const handleSendCode = async (f) => {
@@ -205,7 +408,7 @@ export default function LiveApp() {
     setAuthError(null); setAuthBusy(true);
     try {
       const s = await api.verifyOtp(f.phone, code);
-      if (s && f.mode === "register" && f.avatar) { try { await api.uploadAvatar(s.user.id, f.avatar); } catch (e) { /* fotoğraf sonra */ } }
+      if (s && f.mode === "register" && f.avatar) { try { await api.uploadAvatar(s.user.id, f.avatar); } catch { /* sessiz */ } }
     } catch (e) { setAuthError(friendly(e)); }
     finally { setAuthBusy(false); }
   };
@@ -237,28 +440,34 @@ export default function LiveApp() {
       const a = await refreshApps(); await refreshChats(undefined, a);
       setView({ name: "root" });
       if (r.conversation_id) { setTab("chats"); setView({ name: "chat", id: r.conversation_id }); }
-      showToast("Başvurun iletildi 👋");
+      showToast(t("Başvurun iletildi 👋"));
     } catch (e) { fail(e); }
   };
   const confirmJoin = async (appId) => {
-    try { await api.setApplication(appId, { applicant_approved: true }); const a = await refreshApps(); await Promise.all([refreshEvents(), refreshChats(undefined, a)]); showToast("Kadrodasın 🎉"); }
+    try { await api.setApplication(appId, { applicant_approved: true }); const a = await refreshApps(); await Promise.all([refreshEvents(), refreshChats(undefined, a)]); showToast(t("Kadrodasın 🎉")); setTimeout(askPush, 1200); }
     catch (e) { fail(e); }
   };
   const approveApp = async (appId) => {
-    try { await api.setApplication(appId, { organizer_approved: true }); await refreshApps(); showToast("Onayladın · karşı tarafın son onayı bekleniyor"); }
+    try { await api.setApplication(appId, { organizer_approved: true }); await refreshApps(); showToast(t("Onayladın · karşı tarafın son onayı bekleniyor")); }
     catch (e) { fail(e); }
   };
   const rejectApp = async (appId) => { try { await api.setApplication(appId, { status: "reddedildi" }); await refreshApps(); } catch (e) { fail(e); } };
+  const creatingRef = useRef(false);          // çift dokunuş kilidi
   const createEvent = async (f) => {
+    if (creatingRef.current) return;
+    creatingRef.current = true;
     try {
       const id = await api.createEvent(meId, f);
       await Promise.all([refreshEvents(), refreshChats()]);
       setTab("home"); setView({ name: "event", id });
       showToast(f.kind === "rakip" ? "Rakip ilanın yayında 🆚" : f.recurrence === "haftalik" ? "Haftalık seri yayında 🔁" : "Talebin yayında 🚀");
+      setTimeout(askPush, 1500);
+      if (f.preset === "ekip") { const ev = { id, title: f.title, date: `${f.dateISO} ${f.time}`, venue: f.venue, weekday: f.weekday, time: f.time }; setTimeout(() => Share.share({ message: buildTeamInvite(ev, me) }).catch(() => {}), 600); }
       if (f.kind === "rakip" && f.teamName) setMe((m) => ({ ...m, teamName: f.teamName }));
     } catch (e) { fail(e); }
+    finally { creatingRef.current = false; }
   };
-  const createPoll = async (chatId, q, options, multiple) => { try { await api.createPoll(chatId, q, options, multiple); await refreshChats(); showToast("Anket gönderildi 📊"); } catch (e) { fail(e); } };
+  const createPoll = async (chatId, q, options, multiple) => { try { await api.createPoll(chatId, q, options, multiple); await refreshChats(); showToast(t("Anket gönderildi 📊")); } catch (e) { fail(e); } };
   const vote = async (chatId, pollId, optionId, selected) => {
     // iyimser güncelleme, sonra sunucu
     setChats((cs) => cs.map((c) => c.id !== chatId ? c : { ...c, msgs: c.msgs.map((m) => {
@@ -270,7 +479,7 @@ export default function LiveApp() {
     }) }));
     try { await api.vote(meId, pollId, optionId, selected); } catch (e) { fail(e); await refreshChats(); }
   };
-  const closePoll = async (chatId, pollId) => { try { await api.closePoll(pollId); await refreshChats(); showToast("Anket kapatıldı"); } catch (e) { fail(e); } };
+  const closePoll = async (chatId, pollId) => { try { await api.closePoll(pollId); await refreshChats(); showToast(t("Anket kapatıldı")); } catch (e) { fail(e); } };
 
   /* --- var mısın (sabit kadro) --- */
   const availabilityFor = (ev) => {
@@ -280,27 +489,69 @@ export default function LiveApp() {
     const mine = msg ? Object.entries(msg.poll.votes || {}).find(([, vs]) => vs.some((v) => v.id === "me")) : null;
     return { ...base, chatId: g ? g.id : null, pollId: base.pollId || (msg ? msg.poll.id : null), myAnswer: mine ? mine[0] : null };
   };
-  const askAvailability = async (eventId) => { try { await api.askAvailability(eventId); await Promise.all([refreshEvents(), refreshChats()]); showToast("Sabit kadroya soruldu 📊"); } catch (e) { fail(e); } };
+  const askAvailability = async (eventId) => { try { await api.askAvailability(eventId); await Promise.all([refreshEvents(), refreshChats()]); showToast(t("Sabit kadroya soruldu 📊")); } catch (e) { fail(e); } };
   const answerAvailability = async (eventId, optionId) => {
     const ev = events.find((e) => e.id === eventId); const av = availabilityFor(ev);
-    if (!av || !av.pollId) { showToast("Henüz sorulmadı"); return; }
+    if (!av || !av.pollId) { showToast(t("Henüz sorulmadı")); return; }
     await vote(av.chatId, av.pollId, optionId, true);
     await refreshEvents();
   };
-  const applySuggested = async (eventId) => { try { const n = await api.applySuggestedNeeded(eventId); await Promise.all([refreshEvents(), refreshChats()]); showToast(`Eksik ${n} olarak güncellendi · kadroya duyuruldu`); } catch (e) { fail(e); } };
+  const applySuggested = async (eventId) => { try { const n = await api.applySuggestedNeeded(eventId); await Promise.all([refreshEvents(), refreshChats()]); showToast(t("Eksik {p0} olarak güncellendi · kadroya duyuruldu", { p0: n })); } catch (e) { fail(e); } };
 
-  const sendMessage = async (chatId, text) => {
-    try { await api.sendMessage(meId, chatId, text); } catch (e) { fail(e); }
+  /* --- misafir oyuncular --- */
+  const addGuest = async (eventId, name, pos = null) => { const ev = events.find((e) => e.id === eventId); try { await api.addGuest(meId, ev, name, pos); await refreshEvents(); showToast(t("{p0} eklendi", { p0: name })); } catch (e) { fail(e); } };
+  const removeGuest = async (eventId, guestId) => { try { await api.removeGuest(guestId); await refreshEvents(); } catch (e) { fail(e); } };
+  const toggleGuest = async (eventId, guestId, available) => { try { await api.setGuestRecord(eventId, guestId, { available }); await refreshEvents(); } catch (e) { fail(e); } };
+  const rosterWithGuests = (ev) => [...rosterFor(ev).map((m) => ({ ...m, checkedIn: (ev.checkedIns || []).includes(m.id) })), ...guestPlayers(ev)];
+
+  /* --- takvim & yol tarifi --- */
+  const calendarFor = async (ev) => {
+    try { await addToCalendar(ev); showToast(t("Takvime eklendi · maçtan 2 saat önce hatırlatır 📅")); }
+    catch (e) { const m = String(e && e.message); showToast(m.includes("IZIN_YOK") ? "Takvim izni verilmedi" : "Takvime eklenemedi"); }
   };
-  const startCall = async (chat) => {
-    const r = rulesFor(chat);
-    if (r && !r.canCall) { showToast(r.callReason); return; }
+  const directionsFor = (ev) => yolSec(ev.venue || t("Saha"), ev.venueLat, ev.venueLng, `${ev.venue || ""} ${ev.city || user.city}`);
+
+  /* --- sohbet: sabitleme, fotoğraf, eski mesajlar, sessize alma; sahadayım; itirazlar --- */
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [disputes, setDisputes] = useState({});
+  const pinMessage = async (chatId, msg) => { try { await api.pinMessage(chatId, msg ? msg.dbId : null); await refreshChats(); showToast(msg ? "Mesaj sabitlendi 📌" : "Sabitleme kaldırıldı"); } catch (e) { fail(e); } };
+  const sendImage = async (chatId) => { const uri = await pickPhoto(); if (!uri) return; try { await api.sendImage(meId, chatId, uri); } catch (e) { fail(e); } };
+  const loadOlder = async (chatId) => {
+    const c = chats.find((x) => x.id === chatId); const first = c && c.msgs.find((m) => m.dbId); if (!c || !first) return;
+    setLoadingOlder(true);
     try {
-      const row = await api.logCall(meId, chat.otherId);
-      if (row.status === "engellendi") { showToast("Karşı taraf şu an aranamıyor"); return; }
-      setCall({ chatId: chat.id, name: chat.title, avatar: chat.other ? chat.other.avatar : null, callId: row.id });
-    } catch (e) { fail(e); }
+      const rows = await api.olderMessages(chatId, first.dbId);
+      const mapped = rows.map((m) => ({ id: String(m.id), dbId: m.id, from: m.type === "sistem" || !m.sender_id ? "sys" : m.sender_id === meId ? "me" : m.sender_id, name: m.users ? m.users.full_name : undefined, text: m.content, image: m.image_url || undefined, time: api.fmtTime(m.created_at) }));
+      setChats((cs) => cs.map((x) => (x.id === chatId ? { ...x, msgs: [...mapped, ...x.msgs], hasMore: rows.length >= 50 } : x)));
+    } catch (e) { fail(e); } finally { setLoadingOlder(false); }
   };
+  const muteChat = async (chatId, muted) => { try { await api.setMuted(meId, chatId, muted); setChats((cs) => cs.map((c) => (c.id === chatId ? { ...c, muted } : c))); showToast(muted ? "Grup sessize alındı" : "Bildirimler açıldı"); } catch (e) { fail(e); } };
+  const checkIn = async (eventId) => { try { await api.checkIn(eventId); await refreshEvents(); showToast(t("Sahadayım dedin ✓")); } catch (e) { fail(e); } };
+  const fixAttendance = async (eventId, userId) => { try { await api.fixAttendance(eventId, userId); setDisputes((d) => ({ ...d, [eventId]: (d[eventId] || []).filter((x) => x.userId !== userId) })); showToast(t("Yoklama düzeltildi ✓")); } catch (e) { fail(e); } };
+  const canPinIn = (chat) => !!chat && chat.type === "grup" && (chat.members || []).some((m) => m.id === "me" && m.role === "organizator");
+  useEffect(() => { if (activeEventRef.current && activeEventRef.current.mine && activeEventRef.current.status === "tamamlandi") api.eventDisputes(activeEventRef.current.id).then((d) => setDisputes((x) => ({ ...x, [activeEventRef.current.id]: d }))); }, [view]);  
+
+  const copyToClipboard = async (text, msg = "IBAN kopyalandı 💳") => { const ok = await copyText(text); showToast(ok ? msg : t("Kopyalanamadı")); };
+  const copyIbanFor = (eventId) => {
+    const ev = events.find((e) => e.id === eventId); const g = ev && groupFor ? groupFor(ev) : null;
+    const gg = g || chats.find((c) => c.type === "grup" && c.eventId === eventId);
+    const msg = gg && [...gg.msgs].reverse().find((m) => m.from === "sys" && extractIban(m.text));
+    if (!msg) { showToast(t("Organizatör henüz IBAN göndermedi")); return; }
+    copyToClipboard(extractIban(msg.text).raw);
+  };
+
+  const reactToMessage = async (chatId, msgId, emoji) => {
+    const c = chats.find((x) => x.id === chatId);
+    const m = c && c.msgs.find((x) => x.id === msgId);
+    if (!m || !m.dbId) return;
+    const current = (() => { for (const [e, l] of Object.entries(m.reactions || {})) if (l.some((v) => v.id === "me")) return e; return null; })();
+    try { await api.toggleReactionApi(meId, m.dbId, emoji, current); await refreshChats(); } catch (e) { fail(e); }
+  };
+
+  const sendMessage = async (chatId, text, replyTo = null) => {
+    try { await api.sendMessage(meId, chatId, text, replyTo && replyTo.dbId ? replyTo.dbId : null); } catch (e) { fail(e); }
+  };
+  const startCall = () => showToast(t("Sesli arama yakında geliyor — şimdilik mesajlaşabilirsin"));
   const endCall = (seconds) => { if (call && call.callId) api.endCall(call.callId, seconds > 0); setCall(null); };
   const saveAttendance = async (eventId, marks) => {
     try {
@@ -312,7 +563,7 @@ export default function LiveApp() {
   };
   const disputeAttendance = async (eventId) => {
     const ev = events.find((e) => e.id === eventId);
-    try { await api.disputeAttendance(meId, eventId, ev && ev.org ? ev.org.id : null); setEvents((es) => es.map((e) => (e.id === eventId ? { ...e, disputed: true } : e))); showToast("İtirazın iletildi"); }
+    try { await api.disputeAttendance(meId, eventId, ev && ev.org ? ev.org.id : null); setEvents((es) => es.map((e) => (e.id === eventId ? { ...e, disputed: true } : e))); showToast(t("İtirazın iletildi")); }
     catch (e) { fail(e); }
   };
   const changeSettings = async (s) => { setSettings(s); try { await api.updateSettings(meId, s); } catch (e) { fail(e); } };
@@ -321,36 +572,32 @@ export default function LiveApp() {
     catch (e) { fail(e); }
   };
   const changeCity = async (city) => {
-    try { await api.changeCity(meId, city); const p = await loadProfile(meId); await refreshEvents(p); showToast(`${city} etkinlikleri gösteriliyor`); }
+    try { await api.changeCity(meId, city); const p = await loadProfile(meId); await refreshEvents(p); showToast(t("{p0} etkinlikleri gösteriliyor", { p0: city })); }
     catch (e) { fail(e); }
   };
-  const deleteAccount = async () => { try { await api.deleteAccount(); showToast("Hesabın silindi"); } catch (e) { fail(e); } };
-  const shareEvent = async (ev) => { try { const r = await Share.share({ message: buildShareText(ev, me) }); if (r.action === Share.sharedAction) showToast("Paylaşıldı 🚀"); } catch (e) { /* iptal */ } };
-  const inviteFriends = async () => { try { await Share.share({ message: buildInviteText(me) }); } catch (e) { /* iptal */ } };
+  const deleteAccount = async () => { try { await api.deleteAccount(); showToast(t("Hesabın silindi")); } catch (e) { fail(e); } };
+  const shareEvent = async (ev) => { try { const r = await Share.share({ message: buildShareText(ev, me) }); if (r.action === Share.sharedAction) showToast(t("Paylaşıldı 🚀")); } catch { /* sessiz */ } };
+  const inviteFriends = async () => { try { await Share.share({ message: buildInviteText(me) }); } catch { /* sessiz */ } };
 
   const messageMember = async (member) => { try { const id = await api.openDirectChat(meId, member.id); await refreshChats(); setMemberSheet(null); openChat(id); } catch (e) { fail(e); } };
-  const callMember = async (member) => {
-    const r = rulesForMember(member); if (!r.canCall) { showToast(r.callReason); return; }
-    try { const id = await api.openDirectChat(meId, member.id); await refreshChats(); setMemberSheet(null); const row = await api.logCall(meId, member.id); if (row.status === "engellendi") { showToast("Şu an aranamıyor"); return; } setCall({ chatId: id, name: member.name, avatar: member.avatar, callId: row.id }); }
-    catch (e) { fail(e); }
-  };
+  const callMember = () => showToast(t("Sesli arama yakında geliyor — şimdilik mesaj at"));
   const removeMember = async (chatId, member) => {
     const c = chats.find((x) => x.id === chatId);
-    try { await api.removeMember(c ? c.eventId : null, chatId, member.id); await Promise.all([refreshChats(), refreshEvents()]); setMemberSheet(null); showToast(`${member.name.split(" ")[0]} kadrodan çıkarıldı`); }
+    try { await api.removeMember(c ? c.eventId : null, chatId, member.id); await Promise.all([refreshChats(), refreshEvents()]); setMemberSheet(null); showToast(t("{p0} kadrodan çıkarıldı", { p0: member.name.split(" ")[0] })); }
     catch (e) { fail(e); }
   };
   /* --- Bağlantı 2: engelleme, şikayet, puanlama, yönetim --- */
   const toggleBlock = async (member) => {
     try {
-      if (isBlocked(member.id)) { await api.unblockUser(meId, member.id); setBlocked((b) => b.filter((x) => x.id !== member.id)); showToast("Engel kaldırıldı"); }
-      else { await api.blockUser(meId, member.id); setBlocked((b) => [...b, member]); setMemberSheet(null); showToast(`${member.name.split(" ")[0]} engellendi`); await refreshEvents(); }
+      if (isBlocked(member.id)) { await api.unblockUser(meId, member.id); setBlocked((b) => b.filter((x) => x.id !== member.id)); showToast(t("Engel kaldırıldı")); }
+      else { await api.blockUser(meId, member.id); setBlocked((b) => [...b, member]); setMemberSheet(null); showToast(t("{p0} engellendi", { p0: member.name.split(" ")[0] })); await refreshEvents(); }
     } catch (e) { fail(e); }
   };
   const submitReport = async (reasonLabel) => {
     const r = REPORT_REASONS.find((x) => x.label === reasonLabel); const target = reportTarget;
     setReportTarget(null); setMemberSheet(null);
     if (!target || !r) return;
-    try { await api.reportUser(meId, target.id, r.id); showToast("Şikayetin iletildi · inceleniyor"); } catch (e) { fail(e); }
+    try { await api.reportUser(meId, target.id, r.id); showToast(t("Şikayetin iletildi · inceleniyor")); } catch (e) { fail(e); }
   };
   const pendingRatings = events.filter((e) => e.status === "tamamlandi" && (e.joined || e.mine) && !ratedEvents.includes(e.id));
   const peopleFor = (ev) => {
@@ -358,12 +605,33 @@ export default function LiveApp() {
     if (!ev.mine && ev.org) people.unshift(memberFromOrg(ev.org, "organizator", "ekip"));
     return people;
   };
-  const claimPayment = async (eventId) => { try { await api.claimPayment(eventId); await refreshEvents(); showToast("Organizatöre bildirildi"); } catch (e) { fail(e); } };
+  const claimPayment = async (eventId) => { try { await api.claimPayment(eventId); await refreshEvents(); showToast(t("Organizatöre bildirildi")); } catch (e) { fail(e); } };
+  /* --- gol/asist, sezon, yoklama kodu --- */
+  const [checkinCodes, setCheckinCodes] = useState({});
+  const [seasons, setSeasons] = useState({});
+  const setStat = async (eventId, m, sv) => {
+    setEvents((es) => es.map((e) => (e.id !== eventId ? e : { ...e, stats: [...(e.stats || []).filter((x) => x.id !== m.id), { id: m.id, name: m.name, goals: sv.goals, assists: sv.assists }] })));
+    try { await api.setMatchStat(eventId, meId, m, sv); } catch (e) { fail(e); await refreshEvents(); }
+  };
+  const shareSummary = (ev) => Share.share({ message: buildMatchSummary(ev, { stats: ev.stats || [], mine: ev.mine }) }).catch(() => {});
+  const openCode = async (eventId) => { try { const code = await api.openCheckinCode(eventId); setCheckinCodes((c) => ({ ...c, [eventId]: code })); } catch (e) { fail(e); } };
+  const checkInWithCode = async (eventId, code) => { try { await api.checkInWithCode(eventId, code); await refreshEvents(); showToast(t("Sahadayım kaydedildi ✓")); } catch (e) { fail(e); } };
+  useEffect(() => {
+    const c = infoChatRef.current;
+    if (c && c.type === "grup" && (c.seriesId || c.eventId)) api.seasonTable(meId, c.seriesId || c.eventId).then((rows) => setSeasons((x) => ({ ...x, [c.id]: rows })));
+  }, [view]);  
+
+  const confirmAllPayments = (eventId) => {
+    const ev = events.find((e) => e.id === eventId); const pend = ((ev && ev.payments) || []).filter((p) => p.status === "bekliyor" || p.status === "odedim");
+    Alert.alert(t("Herkes ödedi"), `${pend.length} kişi 'ödendi' olarak işaretlenecek.`, [{ text: t("Vazgeç"), style: "cancel" }, { text: t("İşaretle"), onPress: async () => {
+      try { for (const p of pend) await api.confirmPayment(eventId, p.id, "odendi"); await refreshEvents(); showToast(t("Tüm ödemeler işaretlendi ✓")); } catch (e) { fail(e); }
+    } }]);
+  };
   const confirmPayment = async (eventId, userId, status) => { try { await api.confirmPayment(eventId, userId, status); await refreshEvents(); } catch (e) { fail(e); } };
-  const sendIban = async (eventId) => { if (!paymentDetails) { showToast("Önce Ayarlar > Ödeme bilgileri'ne IBAN'ını yaz"); setView({ name: "settings" }); return; } try { await api.sendIban(eventId); await refreshChats(); showToast("IBAN gruba gönderildi 💳"); } catch (e) { fail(e); } };
+  const sendIban = async (eventId) => { if (!paymentDetails) { showToast(t("Önce Ayarlar > Ödeme bilgileri'ne IBAN'ını yaz")); setView({ name: "settings" }); return; } try { await api.sendIban(eventId); await refreshChats(); showToast(t("IBAN gruba gönderildi 💳")); } catch (e) { fail(e); } };
   const remindPayments = async (eventId) => { try { const n = await api.remindPayments(eventId); await refreshEvents(); showToast(n ? `${n} kişiye hatırlatma gönderildi` : "Bekleyen ödeme yok ya da 24 saat dolmadı"); } catch (e) { fail(e); } };
-  const saveIban = async (d) => { try { await api.savePaymentDetails(meId, d); setPaymentDetails(d); showToast("Ödeme bilgilerin kaydedildi 💳"); } catch (e) { fail(e); } };
-  const recordScore = async (eventId, home, away) => { try { await api.recordScore(eventId, home, away); await Promise.all([refreshEvents(), refreshChats()]); showToast(`Skor kaydedildi · ${home} – ${away}`); } catch (e) { fail(e); } };
+  const saveIban = async (d) => { try { await api.savePaymentDetails(meId, d); setPaymentDetails(d); showToast(t("Ödeme bilgilerin kaydedildi 💳")); } catch (e) { fail(e); } };
+  const recordScore = async (eventId, home, away) => { try { await api.recordScore(eventId, home, away); await Promise.all([refreshEvents(), refreshChats()]); showToast(t("Skor kaydedildi · {p0} – {p1}", { p0: home, p1: away })); } catch (e) { fail(e); } };
   const submitRatings = async (eventId, ratings, mvpId = null) => {
     try {
       if (mvpId) { await api.voteMvp(meId, eventId, mvpId); setMvpVotes((v) => ({ ...v, [eventId]: mvpId })); }
@@ -371,24 +639,24 @@ export default function LiveApp() {
       if (n > 0) setRatedEvents((r) => [...r, eventId]);
       await refreshEvents();
       await refreshChats();
-      showToast(`${n} puan kaydedildi ⭐`); setView({ name: "event", id: eventId });
+      showToast(t("{p0} puan kaydedildi ⭐", { p0: n })); setView({ name: "event", id: eventId });
     } catch (e) { fail(e); }
   };
   const updateEvent = async (id, f) => {
-    try { await api.updateEvent(id, f); await Promise.all([refreshEvents(), refreshChats()]); showToast("Değişiklikler kaydedildi · kadroya duyuruldu"); setView({ name: "event", id }); }
+    try { await api.updateEvent(id, f); await Promise.all([refreshEvents(), refreshChats()]); showToast(t("Değişiklikler kaydedildi · kadroya duyuruldu")); setView({ name: "event", id }); }
     catch (e) { fail(e); }
   };
   const cancelEvent = (id) => {
     const ev = events.find((e) => e.id === id); if (!ev) return;
-    Alert.alert("Etkinliği iptal et", `${ev.title} iptal edilecek, kadrodakilere bildirim gidecek. Maça 24 saatten az kaldıysa geç iptal olarak güvenilirliğine işler.`,
-      [{ text: "Vazgeç", style: "cancel" }, { text: "İptal et", style: "destructive", onPress: async () => {
+    Alert.alert(t("Etkinliği iptal et"), `${ev.title} iptal edilecek, kadrodakilere bildirim gidecek. Maça 24 saatten az kaldıysa geç iptal olarak güvenilirliğine işler.`,
+      [{ text: t("Vazgeç"), style: "cancel" }, { text: t("İptal et"), style: "destructive", onPress: async () => {
         try { const late = await api.cancelEvent(id); await Promise.all([refreshEvents(), refreshChats()]); showToast(late ? "İptal edildi · geç iptal güvenilirliğine işlendi" : "Etkinlik iptal edildi, kadroya bildirildi"); setView({ name: "root" }); }
         catch (e) { fail(e); }
       } }]);
   };
   const leaveEvent = (id) => {
-    Alert.alert("Kadrodan ayrıl", "Yerin yeniden açılır ve organizatöre haber gider. Maça 24 saatten az kaldıysa geç ayrılma sayılır ve güvenilirliğin düşer.",
-      [{ text: "Vazgeç", style: "cancel" }, { text: "Ayrıl", style: "destructive", onPress: async () => {
+    Alert.alert(t("Kadrodan ayrıl"), t("Yerin yeniden açılır ve organizatöre haber gider. Maça 24 saatten az kaldıysa geç ayrılma sayılır ve güvenilirliğin düşer."),
+      [{ text: t("Vazgeç"), style: "cancel" }, { text: t("Ayrıl"), style: "destructive", onPress: async () => {
         try { const late = await api.leaveEvent(id); await Promise.all([refreshEvents(), refreshChats(), refreshApps()]); showToast(late ? "Ayrıldın · geç ayrılma güvenilirliğine işlendi" : "Kadrodan ayrıldın"); setView({ name: "root" }); }
         catch (e) { fail(e); }
       } }]);
@@ -396,8 +664,9 @@ export default function LiveApp() {
 
   const openProfile = async (member) => {
     setMemberSheet(null);
-    setProfile({ user: member, comments: [], loading: true }); setView({ name: "profile", id: member.id });
-    try { const p = await api.getPublicProfile(member.id); const ps = await api.paymentStats(member.id); setProfile({ user: { ...p.user, role: member.role, paymentStats: ps }, comments: p.comments, loading: false }); }
+    setProfile({ user: member, comments: [], loading: true });
+    api.userExtras(member.id).then((ex) => setProfile((pr) => ({ ...pr, extras: ex }))).catch(() => {}); setView({ name: "profile", id: member.id });
+    try { const p = await api.getPublicProfile(member.id); const [ps, tt] = await Promise.all([api.paymentStats(member.id), api.playerTotals(member.id)]); setProfile({ user: { ...p.user, role: member.role, paymentStats: ps, totals: tt }, comments: p.comments, loading: false }); }
     catch (e) { setProfile((x) => x ? { ...x, loading: false } : x); fail(e); }
   };
 
@@ -414,10 +683,10 @@ export default function LiveApp() {
 
   const joinWaitlist = async (ev, position) => {
     setWaitEvent(null);
-    try { await api.joinWaitlist(meId, ev.id, position); await refreshEvents(); showToast("Yedek listesindesin · yer açılınca 2 saatlik onay teklifi gelecek"); }
+    try { await api.joinWaitlist(meId, ev.id, position); await refreshEvents(); showToast(t("Yedek listesindesin · yer açılınca 2 saatlik onay teklifi gelecek")); }
     catch (e) { fail(e); }
   };
-  const leaveWaitlist = async (id) => { try { await api.leaveWaitlist(meId, id); await refreshEvents(); showToast("Yedek listesinden ayrıldın"); } catch (e) { fail(e); } };
+  const leaveWaitlist = async (id) => { try { await api.leaveWaitlist(meId, id); await refreshEvents(); showToast(t("Yedek listesinden ayrıldın")); } catch (e) { fail(e); } };
   const myOpenEvents = events.filter((e) => e.mine && e.status === "acik" && !e.ended);
   const inviteTo = async (member, ev) => {
     setInviteTarget(null);
@@ -426,10 +695,10 @@ export default function LiveApp() {
     try {
       await api.inviteUser(ev.id, member.id, slot && slot.id !== "farketmez" ? slot.id : null);
       const a = await refreshApps(); await refreshChats(undefined, a);
-      showToast(`Davet gönderildi · ${member.name.split(" ")[0]} cevaplayınca haber vereceğiz`);
+      showToast(t("Davet gönderildi · {p0} cevaplayınca haber vereceğiz", { p0: member.name.split(" ")[0] }));
     } catch (e) { fail(e); }
   };
-  const declineInvite = async (appId) => { try { await api.setApplication(appId, { status: "reddedildi" }); await refreshApps(); showToast("Davet reddedildi"); } catch (e) { fail(e); } };
+  const declineInvite = async (appId) => { try { await api.setApplication(appId, { status: "reddedildi" }); await refreshApps(); showToast(t("Davet reddedildi")); } catch (e) { fail(e); } };
 
   const openInfo = (chat) => {
     if (chat.type === "grup") { setView({ name: "groupInfo", id: chat.id }); return; }
@@ -440,6 +709,7 @@ export default function LiveApp() {
     if (n.dbId) api.markNotifRead(n.dbId);
     const d = n.data || {};
     const evId = d.event_id || d.eventId, chId = d.conversation_id || d.chatId;
+    if (n.type === "teklif") { refreshOffers(); setView({ name: "teklifler" }); return; }
     if (n.type === "yoklama" && evId) { setTab("home"); setView({ name: "attendance", id: evId }); return; }
     if (n.type === "puanlama" && evId) { setTab("home"); setView({ name: "rate", id: evId }); return; }
     if (chId && chats.some((c) => c.id === chId)) { openChat(chId); return; }
@@ -447,6 +717,11 @@ export default function LiveApp() {
     setView({ name: "root" });
   };
   const readAllNotifs = () => { setNotifs((ns) => ns.map((x) => ({ ...x, read: true }))); api.markAllNotifsRead(); };
+
+  useEffect(() => { if (meId && user) refreshMarket(); }, [meId, user && user.city]);
+  useEffect(() => { if (meId && user) refreshPosts(); }, [meId, user && user.city]);
+  useEffect(() => { if (meId && user) { refreshOffers(); api.myTeam(meId).then(setMyTeamRow).catch(() => {}); } }, [meId]);
+  useEffect(() => { if (meId) api.listSponsors().then((x) => { if (x.length) setSponsors(x); }).catch(() => { /* tablo yoksa varsayılan */ }); }, [meId]);
 
   /* ---------- yerleşim ---------- */
   if (session === undefined)
@@ -458,6 +733,7 @@ export default function LiveApp() {
       </View>
     );
 
+  if (!session && onboarded === false) return <OnboardingScreen onDone={finishOnboarding} />;
   if (!session)
     return (
       <View style={{ flex: 1, backgroundColor: C.turf }}>
@@ -473,8 +749,8 @@ export default function LiveApp() {
       <View style={{ flex: 1, backgroundColor: C.turf, alignItems: "center", justifyContent: "center", padding: 24 }}>
         <StatusBar style="light" />
         <ActivityIndicator color="#fff" />
-        <Text style={{ color: C.mist, marginTop: 14, textAlign: "center" }}>Profil yükleniyor…</Text>
-        <TouchableOpacity onPress={logout} style={{ marginTop: 24 }}><Text style={{ color: "#fff", fontWeight: "800" }}>Çıkış yap</Text></TouchableOpacity>
+        <Text style={{ color: C.mist, marginTop: 14, textAlign: "center" }}>{t("Profil yükleniyor…")}</Text>
+        <TouchableOpacity onPress={logout} style={{ marginTop: 24 }}><Text style={{ color: "#fff", fontWeight: "800" }}>{t("Çıkış yap")}</Text></TouchableOpacity>
         <Toast text={toast} />
       </View>
     );
@@ -494,50 +770,74 @@ export default function LiveApp() {
           İtiraz etmek için destek@eksikvar.app adresine yazabilirsin.
         </Text>
         <TouchableOpacity onPress={logout} style={{ marginTop: 26, backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 999, paddingHorizontal: 18, paddingVertical: 10 }}>
-          <Text style={{ color: "#fff", fontWeight: "800" }}>Çıkış yap</Text>
+          <Text style={{ color: "#fff", fontWeight: "800" }}>{t("Çıkış yap")}</Text>
         </TouchableOpacity>
       </View>
     );
 
   const activeChat = view.name === "chat" ? chats.find((c) => c.id === view.id) : null;
   const infoChat = view.name === "groupInfo" ? chats.find((c) => c.id === view.id) : null;
+  infoChatRef.current = infoChat;
   const activeEvent = view.name === "event" ? events.find((e) => e.id === view.id) : null;
+  activeEventRef.current = activeEvent;
   const applyEvent = view.name === "apply" ? events.find((e) => e.id === view.id) : null;
   const attendanceEvent = view.name === "attendance" ? events.find((e) => e.id === view.id) : null;
   const rateEvent = view.name === "rate" ? events.find((e) => e.id === view.id) : null;
   const lineupChat = view.name === "lineup" ? chats.find((c) => c.id === view.id) : null;
   const totalUnread = chats.reduce((s, c) => s + (c.unread || 0), 0);
   const unreadNotifs = notifs.filter((n) => !n.read).length;
-  const hideTabs = ["chat", "create", "settings", "groupInfo", "attendance", "notifications", "rate", "blocked", "profile", "lineup"].includes(view.name) || !!activeEvent || !!call;
+  const hideTabs = ["chat", "create", "settings", "groupInfo", "attendance", "notifications", "rate", "blocked", "profile", "lineup", "editProfile", "penalti", "kadroDene", "basket", "voleybol", "tenis", "teklifler", "kulup", "takim", "arena", "oyunlar", "maclarim"].includes(view.name);
+  const ustEkran = ["hub", "penalti", "kadroDene", "basket", "voleybol", "tenis", "teklifler", "kulup", "takim", "arena", "oyunlar", "maclarim"].includes(view.name) || !!activeEvent || !!call;
   const user = { ...me, city: me.city || "Ankara" };
 
   return (
     <View style={{ flex: 1, backgroundColor: C.turf }}>
       <StatusBar style="light" />
       <SafeAreaView edges={["top"]} style={{ flex: 0, backgroundColor: C.turf }} />
-      <SafeAreaView edges={["left", "right", "bottom"]} style={{ flex: 1, backgroundColor: "#fff" }}>
+      <SafeAreaView edges={["left", "right", "bottom"]} style={{ flex: 1, backgroundColor: C.surface }}>
         <View style={{ flex: 1, backgroundColor: C.chalk }}>
-          {tab === "home" && view.name !== "event" && (
+          {tab === "home" && !ustEkran && view.name !== "event" && (
             <HomeScreen user={user} events={events} onOpen={(id) => setView({ name: "event", id })}
               onAttendance={(id) => setView({ name: "attendance", id })} onChangeCity={changeCity}
-              onNotifications={() => setView({ name: "notifications" })} unreadCount={unreadNotifs} blockedIds={blocked.map((b) => b.id)} />
+              onNotifications={() => setView({ name: "notifications" })} unreadCount={unreadNotifs} blockedIds={blocked.map((b) => b.id)}
+              onCreate={() => setView({ name: "create" })} onCreateRakip={() => setView({ name: "create", preset: "rakip" })} onBringTeam={() => setView({ name: "create", preset: "ekip" })} loading={loading} offline={offline}
+              sponsors={sponsors}
+              onSponsor={(sp) => { api.sponsorClick(sp.id).catch(() => {}); Linking.openURL(sp.url).catch(() => showToast(t("Bağlantı açılamadı"))); }}
+              market={market} onOpenPlayer={(p) => p.userId === "me" ? setTab("profile") : openProfile({ id: p.userId, name: p.name })}
+              onEditListing={() => setView({ name: "editProfile" })}
+              key={homeKind} initialKind={homeKind}
+              onOfferPlayer={teklifGonder} />
           )}
-          {tab === "search" && (
+          {tab === "search" && !ustEkran && (
             <SearchScreen onSearchUsers={searchUsers} onSearchEvents={searchEvents} suggestions={suggestions}
-              recent={recentSearches} onAddRecent={addRecent} onOpenUser={openProfile} onOpenEvent={openSearchedEvent} />
+              onCommentsPost={acYorumlar}
+              onEditPost={(p) => Alert.prompt ? Alert.prompt(t("Düzenle"), t("Açıklamayı güncelle"), [{ text: t("Vazgeç"), style: "cancel" }, { text: t("Kaydet"), onPress: async (v) => { try { await api.updatePostCaption(p.id, (v || "").trim()); refreshPosts(); showToast(t("Kaydedildi ✓")); } catch (e) { fail(e); } } }], "plain-text", p.caption || "") : showToast(t("Düzenleme iOS'ta"))}
+              onArchivePost={async (p) => { try { await api.archivePost(p.id); refreshPosts(); showToast(t("Arşivlendi 🗄")); } catch (e) { fail(e); } }}
+              recent={recentSearches} onAddRecent={addRecent} onOpenUser={openProfile} onOpenEvent={openSearchedEvent}
+              posts={posts} onLikePost={likePost} onDeletePost={removePost} onCompose={() => setComposer(true)} onOfferPost={teklifGonder} />
           )}
-          {tab === "chats" && view.name !== "chat" && <ChatsScreen chats={chats} onOpen={openChat} />}
+          {tab === "chats" && !ustEkran && view.name !== "chat" && <ChatsScreen chats={chats} onOpen={openChat}
+            onNew={() => Alert.alert(t("Yeni sohbet"), "", [
+              { text: "👤 " + t("Yeni kişi sohbeti"), onPress: () => setYeniSohbet("kisi") },
+              { text: "👥 " + t("Yeni grup"), onPress: () => setYeniSohbet("grup") },
+              { text: t("Vazgeç"), style: "cancel" }])}
+            onMute={(c) => sohbetAyar(c, { is_muted: !c.muted }, c.muted ? t("Ses açıldı 🔔") : t("Sessize alındı 🔕"))}
+            onArchive={(c) => sohbetAyar(c, { archived: !c.archived }, c.archived ? t("Arşivden çıktı 📤") : t("Arşivlendi 🗄"))}
+            onHide={(c) => sohbetAyar(c, { hidden_at: new Date().toISOString() }, t("Sohbet kaldırıldı 🗑"))} />}
           {tab === "chats" && view.name === "chat" && activeChat && (
             <ChatRoomScreen chat={activeChat} apps={apps} rules={rulesFor(activeChat)} onCall={() => startCall(activeChat)}
               onInfo={() => openInfo(activeChat)}
               onLineup={() => setView({ name: "lineup", id: activeChat.id })}
-              onCreatePoll={createPoll} onVote={vote} onClosePoll={closePoll} onBack={() => setView({ name: "root" })} onSend={sendMessage}
+              onCreatePoll={createPoll} onVote={vote} onClosePoll={closePoll} onCopy={copyToClipboard} onReact={reactToMessage}
+              onPin={pinMessage} canPin={canPinIn(activeChat)} onSendImage={sendImage} onLoadOlder={loadOlder} loadingOlder={loadingOlder} onBack={() => setView({ name: "root" })} onSend={sendMessage}
               onConfirmJoin={confirmJoin} onGoChat={openChat} />
           )}
-          {tab === "profile" && view.name !== "settings" && (
+          {tab === "profile" && !ustEkran && view.name !== "settings" && (
             <ProfileScreen user={user} settings={settings} pendingRate={pendingRatings[0] || null} onRate={(id) => { setTab("home"); setView({ name: "rate", id }); }}
               events={events} onOpenEvent={(id) => { setTab("home"); setView({ name: "event", id }); }}
               onPositionsChange={async (list) => { setMe((m) => ({ ...m, positions: list })); try { await api.updatePositions(meId, list); } catch (e) { fail(e); } }}
+              marketMine={myListing} onMarket={() => setView({ name: "editProfile" })}
+              onEdit={() => setView({ name: "editProfile", bolum: "kimlik" })} onBringTeam={() => setView({ name: "create", preset: "ekip" })}
               onSettings={() => setView({ name: "settings" })} onInvite={inviteFriends} onAvatar={changeAvatar} onLogout={logout} />
           )}
 
@@ -551,7 +851,14 @@ export default function LiveApp() {
                 onAcceptInvite={confirmJoin} onDeclineInvite={declineInvite}
                 availability={availabilityFor(activeEvent)} onAskAvailability={askAvailability} onApplySuggested={applySuggested} onAnswer={answerAvailability}
                 onRecordScore={recordScore} myMvpVote={mvpVotes[activeEvent.id] || null}
-                onClaimPayment={claimPayment} onConfirmPayment={confirmPayment} onSendIban={sendIban} onRemindPayments={remindPayments}
+                onClaimPayment={claimPayment} onConfirmPayment={confirmPayment} onSendIban={sendIban} onRemindPayments={remindPayments} onCopyIban={copyIbanFor}
+                paymentDetails={paymentDetails} onSaveIban={saveIban}
+                onCalendar={calendarFor} onDirections={directionsFor} onAddGuest={addGuest} onUpdateNeeds={async (id, needs) => { try { await api.updateEventNeeds(id, needs); await refreshEvents(); showToast(t("İhtiyaç güncellendi \u2713")); } catch (e) { fail(e); } }}
+                onStopSeries={async (id) => { try { await api.stopSeries(id); await refreshEvents(); showToast(t("Seri durduruldu — bu hafta son \u23F9")); } catch (e) { fail(e); } }}
+                onUpdateDesc={async (id, d) => { try { await api.updateEventDesc(id, d); await refreshEvents(); showToast(t("Kaydedildi \u2713")); } catch (e) { fail(e); } }} onAddGuests={async (evId, list) => { const e = events.find((x) => x.id === evId); if (!e) return; try { for (const p of list) await api.addGuest(meId, e, p.name); await refreshEvents(); } catch (er) { fail(er); } }} onRepeat={(ev) => setView({ name: "create", repeat: true, initial: cloneForRepeat(ev) })} onRemoveGuest={removeGuest} onToggleGuest={toggleGuest}
+                onCheckIn={checkIn} disputes={disputes[activeEvent.id] || []} onFixAttendance={fixAttendance} onConfirmAllPayments={confirmAllPayments}
+                statRoster={rosterWithGuests(activeEvent)} onSetStat={setStat} onShareSummary={shareSummary}
+                checkinCode={checkinCodes[activeEvent.id] || null} onOpenCode={openCode} onCheckInWithCode={checkInWithCode}
                 onJoinWaitlist={(id) => setWaitEvent(events.find((e) => e.id === id) || null)} onLeaveWaitlist={leaveWaitlist}
                 onBack={() => setView({ name: "root" })} onApply={() => setView({ name: "apply", id: activeEvent.id })}
                 onApprove={approveApp} onReject={rejectApp} onGoChat={(id) => { const g = groupFor(activeEvent); openChat(g ? g.id : id); }} />
@@ -559,15 +866,52 @@ export default function LiveApp() {
           )}
           {view.name === "create" && (
             <View style={StyleSheet.absoluteFill}>
-              <CreateScreen user={user} initial={view.id ? events.find((e) => e.id === view.id) : null}
+              <CreateScreen user={user} preset={view.preset || null} initial={view.id ? events.find((e) => e.id === view.id) : (view.initial || null)} repeat={!!view.repeat}
                 onBack={() => setView(view.id ? { name: "event", id: view.id } : { name: "root" })}
-                onCreate={(f) => (view.id ? updateEvent(view.id, f) : createEvent(f))} />
+                onCreate={(f) => (view.id ? updateEvent(view.id, f) : createEvent(f))}
+                onListVenues={(city, cat, q) => api.listVenues(city, cat, q)}
+                onAddVenue={(city, cat, name, lat, lng) => api.addVenue(meId, city, cat, name, lat, lng)} />
             </View>
           )}
+          {view.name === "hub" && <HubScreen user={user} onGo={hubGo} />}
+          {view.name === "penalti" && <PenaltyScreen onBack={() => setView({ name: "hub" })} />}
+          {view.name === "basket" && <BasketScreen onBack={() => setView({ name: "hub" })} />}
+          {view.name === "arena" && <ArenaScreen onBack={() => setView({ name: "hub" })} />}
+          {view.name === "takim" && <TakimScreen team={myTeamRow} members={takimUyeler} meId={meId}
+            onTeamChat={() => { const c = chats.find((x) => x.teamId === (myTeamRow && myTeamRow.id)); if (c) { setTab("chats"); setView({ name: "chat", id: c.id }); } else showToast(t("Takım grubu hazırlanıyor — SQL çalıştırıldı mı?")); }}
+            onBack={() => setView({ name: "hub" })}
+            onSave={async (f) => { try { await api.updateTeam(myTeamRow.id, f); await refreshTakim(); showToast(t("Takım güncellendi 🛡")); } catch (e) { fail(e); } }}
+            onRemove={async (uid) => { try { await api.removeTeamMember(myTeamRow.id, uid); await refreshTakim(); } catch (e) { fail(e); } }}
+            onLeave={async () => { try { await api.removeTeamMember(myTeamRow.id, meId); await refreshTakim(); setView({ name: "hub" }); } catch (e) { fail(e); } }}
+            onCreateTeam={() => setTeamKur({ sonra: () => refreshTakim() })}
+            onGoMarket={() => { setHomeKind("pazar"); setTab("home"); setView({ name: "root" }); }}
+            onGoClub={() => { refreshClub(); setView({ name: "kulup" }); }}
+            onOpenUser={(id, name) => openProfile({ id, name })}
+            onLogoPick={async () => { try { const uri = await pickPhoto(); if (!uri) return null; return await api.uploadTeamLogo(meId, myTeamRow.id, uri); } catch (e) { fail(e); return null; } }}
+            onAddGuest={async (ad) => { try { await api.updateTeam(myTeamRow.id, { misafirler: [...(myTeamRow.misafirler || []), ad] }); await refreshTakim(); } catch (e) { fail(e); } }}
+            onRemoveGuest={async (i) => { try { const y = [...(myTeamRow.misafirler || [])]; y.splice(i, 1); await api.updateTeam(myTeamRow.id, { misafirler: y }); await refreshTakim(); } catch (e) { fail(e); } }} />}
+          {view.name === "teklifler" && <OffersScreen offers={offers} onBack={() => setView({ name: "hub" })}
+            onDecide={async (id, st2) => { try { await api.decideOffer(id, st2); await refreshOffers(); if (st2 === "kabul") showToast(t("Kadroya işlendi ✅")); } catch (e) { fail(e); } }}
+            onCancel={async (id) => { try { await api.decideOffer(id, "iptal"); await refreshOffers(); } catch (e) { fail(e); } }}
+            onOpenUser={(id, name) => openProfile({ id, name })} />}
+          {view.name === "kulup" && <ClubBoardScreen rows={clubRows} meId={meId} myTeam={myTeamRow}
+            rakipRows={events.filter((e) => e.kind === "rakip")} onOpenRakip={(e) => openSearchedEvent(e)}
+            appliedIds={offers.filter((o) => o.yon === "giden" && o.kind === "kulup" && o.status === "bekliyor").map((o) => o.kisiId)}
+            myBio={(clubRows.find((r) => myTeamRow && r.teamId === myTeamRow.id) || {}).bio || ""}
+            onBack={() => setView({ name: "hub" })}
+            onApply={async (r) => { try { await api.createOffer(meId, { kind: "kulup", toUser: r.ownerId, teamId: r.teamId, message: t("🙋 Takımınıza katılmak istiyorum!") }); await refreshOffers(); showToast(t("Başvurun iletildi 🙋")); } catch (e) { fail(e); } }}
+            onPublish={async (f) => { try { await api.upsertClubListing(myTeamRow.id, { ...f, active: true }); await refreshClub(); showToast(t("İlan yayında 📣")); } catch (e) { fail(e); } }}
+            onCloseListing={async () => { try { await api.upsertClubListing(myTeamRow.id, { active: false }); await refreshClub(); } catch (e) { fail(e); } }}
+            onCreateTeam={() => setTeamKur({ sonra: () => refreshClub() })} />}
+          {view.name === "voleybol" && <VolleyScreen onBack={() => setView({ name: "hub" })} />}
+          {view.name === "tenis" && <TennisScreen onBack={() => setView({ name: "hub" })} />}
+          {view.name === "maclarim" && <MaclarimScreen events={events} onBack={() => setView({ name: "hub" })} onOpen={(id) => { setTab("home"); setView({ name: "event", id }); }} />}
+          {view.name === "oyunlar" && <OyunSalonuScreen onBack={() => setView({ name: "hub" })} onGo={hubGo} />}
+          {view.name === "kadroDene" && <KadroDeneScreen onSearch={(q) => api.searchUsers(q)} meName={me && me.name} onBack={() => setView({ name: "hub" })} />}
           {view.name === "settings" && (
             <View style={StyleSheet.absoluteFill}>
               <SettingsScreen settings={settings} onChange={changeSettings} onBack={() => setView({ name: "root" })} onDeleteAccount={deleteAccount}
-                blockedCount={blocked.length} onBlocked={() => setView({ name: "blocked" })} paymentDetails={paymentDetails} onSaveIban={saveIban} />
+                blockedCount={blocked.length} onBlocked={() => setView({ name: "blocked" })} paymentDetails={paymentDetails} onSaveIban={saveIban} onTheme={saveTheme} onLang={saveLang} />
             </View>
           )}
           {rateEvent && (
@@ -578,10 +922,19 @@ export default function LiveApp() {
           {view.name === "profile" && profile && (
             <View style={StyleSheet.absoluteFill}>
               <UserProfileScreen user={profile.user} comments={profile.comments} loading={profile.loading}
+                listing={profile.extras && profile.extras.listing} posts={(profile.extras && profile.extras.posts) || []}
+                onOffer={profile.user ? () => teklifGonder({ userId: profile.user.id, name: profile.user.name }) : null}
+                onTeamInvite={profile.user ? () => (myTeamRow ? takimDaveti(profile.user, myTeamRow) : setTeamKur({ sonra: (tk) => takimDaveti(profile.user, tk) })) : null}
                 rules={rulesForMember(profile.user)} blocked={isBlocked(profile.user.id)}
                 onBack={() => setView({ name: "root" })} onMessage={messageMember} onCall={callMember}
                 onBlock={toggleBlock} onReport={(m) => setReportTarget(m)}
                 onInvite={myOpenEvents.length ? (m) => setInviteTarget(m) : undefined} />
+            </View>
+          )}
+          {view.name === "editProfile" && (
+            <View style={StyleSheet.absoluteFill}>
+              <EditProfileScreen bolum={view.bolum || "hepsi"} onSaveIdentity={async (f) => { try { await await api.updateIdentity(meId, f); setMe((u) => (u ? { ...u, favCats: f.favCats, positions: f.positions, catLevels: f.levels || {} } : u)); showToast(t("Kaydedildi \u2713")); } catch (e) { fail(e); } }} user={me} busy={profileBusy} error={profileError} marketMine={myListing} onSaveListing={saveListing} onDropListing={dropListing} onAvatar={changeAvatar} onBack={() => setView({ name: "root" })}
+                onSave={async (f) => { setProfileBusy(true); setProfileError(null); try { await api.updateProfileInfo(meId, f); await loadProfile(meId); setView({ name: "root" }); showToast(t("Profilin güncellendi")); } catch (e) { setProfileError(friendly(e)); } finally { setProfileBusy(false); } }} />
             </View>
           )}
           {view.name === "blocked" && (
@@ -593,20 +946,20 @@ export default function LiveApp() {
             <View style={StyleSheet.absoluteFill}>
               <LineupScreen
                 title={lineupChat.title}
-                players={(lineupChat.members || []).map((m) => (m.id === "me" ? { ...me, id: "me", role: m.role, positions: (me.positions || []) } : m))}
+                players={[...(lineupChat.members || []).map((m) => (m.id === "me" ? { ...me, id: "me", role: m.role, positions: (me.positions || []) } : m)), ...guestPlayers(events.find((e) => e.id === lineupChat.eventId) || {})]}
                 onBack={() => setView({ name: "groupInfo", id: lineupChat.id })}
-                onSend={(text) => { sendMessage(lineupChat.id, text); showToast("Kura gruba gönderildi ⚽"); setView({ name: "chat", id: lineupChat.id }); }}
+                onSend={(text) => { sendMessage(lineupChat.id, text); showToast(t("Kura gruba gönderildi ⚽")); setView({ name: "chat", id: lineupChat.id }); }}
               />
             </View>
           )}
           {view.name === "notifications" && (
             <View style={StyleSheet.absoluteFill}>
-              <NotificationsScreen notifications={notifs} onBack={() => setView({ name: "root" })} onOpen={openNotif} onReadAll={readAllNotifs} onSettings={() => setView({ name: "settings" })} />
+              <NotificationsScreen attendance={events.filter((e) => e.mine && e.ended && e.status !== "tamamlandi")} onAttendance={(id) => setView({ name: "attendance", id })} notifications={notifs} onBack={() => setView({ name: "root" })} onOpen={openNotif} onReadAll={readAllNotifs} onSettings={() => setView({ name: "settings" })} />
             </View>
           )}
           {attendanceEvent && (
             <View style={StyleSheet.absoluteFill}>
-              <AttendanceScreen event={attendanceEvent} roster={rosterFor(attendanceEvent)} onBack={() => setView({ name: "event", id: attendanceEvent.id })} onSave={(marks) => saveAttendance(attendanceEvent.id, marks)} />
+              <AttendanceScreen event={attendanceEvent} roster={rosterWithGuests(attendanceEvent)} onBack={() => setView({ name: "event", id: attendanceEvent.id })} onSave={(marks) => saveAttendance(attendanceEvent.id, marks)} />
             </View>
           )}
           {infoChat && (
@@ -614,7 +967,9 @@ export default function LiveApp() {
               <GroupInfoScreen chat={infoChat} event={infoChat.eventId ? events.find((e) => e.id === infoChat.eventId) : null} me={{ ...me, id: "me" }}
                 onBack={() => setView({ name: "chat", id: infoChat.id })} onOpenEvent={(id) => { setTab("home"); setView({ name: "event", id }); }}
                 onSelectMember={(member) => setMemberSheet({ member, chatId: infoChat.id })}
-                onLineup={() => setView({ name: "lineup", id: infoChat.id })} />
+                onLineup={() => setView({ name: "lineup", id: infoChat.id })}
+                guests={(events.find((e) => e.id === infoChat.eventId) || {}).guests || []}
+                onMute={muteChat} season={seasons[infoChat.id] || null} />
             </View>
           )}
           {call && (<View style={StyleSheet.absoluteFill}><CallScreen call={call} onEnd={endCall} /></View>)}
@@ -628,38 +983,63 @@ export default function LiveApp() {
               blocked={isBlocked(memberSheet.member.id)} onBlock={toggleBlock} onReport={(member) => setReportTarget(member)} onProfile={openProfile}
               onInvite={myOpenEvents.length ? (m) => { setMemberSheet(null); setInviteTarget(m); } : undefined} />
           )}
-          <PickerSheet visible={!!inviteTarget} title={inviteTarget ? `${inviteTarget.name.split(" ")[0]}'i hangi kadroya davet edelim?` : "Davet"}
+          <PickerSheet visible={!!inviteTarget} title={inviteTarget ? `${inviteTarget.name.split(" ")[0]} — hangi kadroya davet edelim?` : "Davet"}
             items={myOpenEvents.map((e) => ({ label: `${e.title} · ${e.date}`, sub: `${e.needed - e.filled} eksik` }))} value={null}
             onSelect={(label) => { const ev = myOpenEvents.find((e) => `${e.title} · ${e.date}` === label); if (ev && inviteTarget) inviteTo(inviteTarget, ev); }}
-            onClose={() => setInviteTarget(null)} placeholder="Etkinlik ara…" />
+            onClose={() => setInviteTarget(null)} placeholder={t("Etkinlik ara…")} />
           <PickerSheet visible={!!reportTarget} title={reportTarget ? `${reportTarget.name.split(" ")[0]} için şikayet nedeni` : "Şikayet"}
-            items={REPORT_REASONS.map((r) => r.label)} value={null} onSelect={submitReport} onClose={() => setReportTarget(null)} placeholder="Neden ara…" />
+            items={REPORT_REASONS.map((r) => r.label)} value={null} onSelect={submitReport} onClose={() => setReportTarget(null)} placeholder={t("Neden ara…")} />
 
+          <VenueSheet key={"hub" + hubCat} cat={hubCat} onCat={setHubCat} visible={venueHub} onClose={() => setVenueHub(false)} cityName={user.city}
+            categoryName={(CATEGORIES.find((c) => c.id === hubCat) || {}).name || ""}
+            onList={(q) => api.listVenues(user.city, hubCat, q)}
+            onAdd={(name, lat, lng) => api.addVenue(meId, user.city, hubCat, name, lat, lng)}
+            onPick={(v) => { setVenueHub(false); yolSec(v.name, v.lat, v.lng, `${v.name} ${user.city}`); }} />
+          {teamKur && (
+            <TeamKurModal onClose={() => setTeamKur(null)}
+              onCreate={async (ad) => { try { const tk = await api.createTeam(meId, user, ad); setMyTeamRow(tk); const sonra = teamKur.sonra; setTeamKur(null); showToast(t("Takım kuruldu! 🛡")); if (sonra) sonra(tk); } catch (e) { fail(e); } }} />
+          )}
+          {yeniSohbet && (
+            <NewChatModal mode={yeniSohbet} busy={sohbetBusy}
+              onClose={() => setYeniSohbet(null)}
+              onSearch={(q) => api.searchUsers(q)}
+              onCreateDirect={async (u) => { try { setSohbetBusy(true); const cid = await api.openDirectChat(meId, u.id); await refreshChats(); setYeniSohbet(null); setTab("chats"); setView({ name: "chat", id: cid }); } catch (e) { fail(e); } finally { setSohbetBusy(false); } }}
+              onCreateGroup={async (ad, users) => { try { setSohbetBusy(true); const cid = await api.createGroupChat(ad, users.map((u) => u.id)); await refreshChats(); setYeniSohbet(null); setTab("chats"); setView({ name: "chat", id: cid }); showToast(t("Grup kuruldu 👥")); } catch (e) { fail(e); } finally { setSohbetBusy(false); } }} />
+          )}
+          {yorumlar && (
+            <CommentsSheet post={yorumlar.post} rows={yorumlar.rows} meId={meId} busy={yorumlar.busy}
+              onClose={() => setYorumlar(null)}
+              onSend={async (b) => { try { setYorumlar((y) => ({ ...y, busy: true })); await api.addComment(meId, yorumlar.post.id, b);
+                const rows = await api.listComments(yorumlar.post.id); setYorumlar((y) => y ? { ...y, rows, busy: false } : y); refreshPosts(); } catch (e) { setYorumlar((y) => y ? { ...y, busy: false } : y); fail(e); } }}
+              onDelete={async (id) => { try { await api.deleteComment(id); const rows = await api.listComments(yorumlar.post.id); setYorumlar((y) => y ? { ...y, rows } : y); refreshPosts(); } catch (e) { fail(e); } }} />
+          )}
+          <PostComposer visible={composer} onClose={() => setComposer(false)} busy={postBusy}
+            hasListing={!!(myListing && myListing.active)} onShare={sharePost} />
           <Toast text={toast} />
 
           {!hideTabs && (
             <View style={st.tabbar}>
               <TouchableOpacity style={st.tabBtn} onPress={() => { setTab("home"); setView({ name: "root" }); }}>
-                <Ionicons name={tab === "home" ? "home" : "home-outline"} size={22} color={tab === "home" ? C.turf : C.gray} />
-                <Text style={[st.tabLabel, { color: tab === "home" ? C.turf : C.gray }]}>Saha</Text>
+                <Ionicons name={tab === "home" ? "home" : "home-outline"} size={22} color={tab === "home" ? C.turfText : C.gray} />
+                <Text style={[st.tabLabel, { color: tab === "home" ? C.turfText : C.gray }]}>{t("tab.home")}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={st.tabBtn} onPress={() => { setTab("search"); setView({ name: "root" }); }}>
-                <Ionicons name={tab === "search" ? "search" : "search-outline"} size={22} color={tab === "search" ? C.turf : C.gray} />
-                <Text style={[st.tabLabel, { color: tab === "search" ? C.turf : C.gray }]}>Ara</Text>
+                <Ionicons name={tab === "search" ? "search" : "search-outline"} size={22} color={tab === "search" ? C.turfText : C.gray} />
+                <Text style={[st.tabLabel, { color: tab === "search" ? C.turfText : C.gray }]}>{t("tab.search")}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={st.fab} onPress={() => setView({ name: "create" })}>
+              <TouchableOpacity style={st.fab} onPress={() => setView({ name: view.name === "hub" ? "root" : "hub" })}>
                 <Ionicons name="add" size={28} color="#fff" />
               </TouchableOpacity>
               <TouchableOpacity style={st.tabBtn} onPress={() => { setTab("chats"); setView({ name: "root" }); }}>
                 <View>
-                  <Ionicons name={tab === "chats" ? "chatbubble-ellipses" : "chatbubble-ellipses-outline"} size={22} color={tab === "chats" ? C.turf : C.gray} />
+                  <Ionicons name={tab === "chats" ? "chatbubble-ellipses" : "chatbubble-ellipses-outline"} size={22} color={tab === "chats" ? C.turfText : C.gray} />
                   {totalUnread > 0 && (<View style={st.tabBadge}><Text style={{ color: "#fff", fontSize: 9, fontWeight: "900" }}>{totalUnread}</Text></View>)}
                 </View>
-                <Text style={[st.tabLabel, { color: tab === "chats" ? C.turf : C.gray }]}>Sohbet</Text>
+                <Text style={[st.tabLabel, { color: tab === "chats" ? C.turfText : C.gray }]}>{t("tab.chats")}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={st.tabBtn} onPress={() => { setTab("profile"); setView({ name: "root" }); }}>
-                <Ionicons name={tab === "profile" ? "person" : "person-outline"} size={22} color={tab === "profile" ? C.turf : C.gray} />
-                <Text style={[st.tabLabel, { color: tab === "profile" ? C.turf : C.gray }]}>Profil</Text>
+                <Ionicons name={tab === "profile" ? "person" : "person-outline"} size={22} color={tab === "profile" ? C.turfText : C.gray} />
+                <Text style={[st.tabLabel, { color: tab === "profile" ? C.turfText : C.gray }]}>{t("tab.profile")}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -676,13 +1056,15 @@ export default function LiveApp() {
   );
 }
 
-const st = StyleSheet.create({
+const mkSt = () => StyleSheet.create({
   tabbar: {
     position: "absolute", bottom: 0, left: 0, right: 0, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-around",
-    backgroundColor: "#fff", borderTopWidth: 1, borderTopColor: C.line, paddingTop: 8, paddingBottom: 10, paddingHorizontal: 8,
+    backgroundColor: C.surface, borderTopWidth: 1, borderTopColor: C.line, paddingTop: 8, paddingBottom: 10, paddingHorizontal: 8,
   },
   tabBtn: { alignItems: "center", gap: 2, paddingHorizontal: 8 },
   tabLabel: { fontSize: 10, fontWeight: "800" },
   fab: { width: 56, height: 56, borderRadius: 28, backgroundColor: C.kit, alignItems: "center", justifyContent: "center", marginTop: -30, elevation: 6, shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 6, shadowOffset: { width: 0, height: 3 } },
   tabBadge: { position: "absolute", top: -4, right: -8, backgroundColor: C.pitch, borderRadius: 8, minWidth: 16, height: 16, alignItems: "center", justifyContent: "center", paddingHorizontal: 3 },
 });
+let st = mkSt();
+onThemeChange(() => { st = mkSt(); });

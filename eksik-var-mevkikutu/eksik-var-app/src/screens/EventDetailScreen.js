@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, TextInput, Modal, StyleSheet,
 import { Ionicons } from "@expo/vector-icons";
 import { t } from "../i18n";
 import { C, onThemeChange } from "../theme";
-import { CATEGORIES, POSITIONS, GUNLER_UZUN, positionSlots, posLabel, posIcon, venueModeLabel, costModeLabel, teamLabel, VARMISIN_OPTIONS, PAYMENT_LABEL, paymentSummary, formatLabel, relInfo, eventPhase } from "../data";
+import { CATEGORIES, GUNLER_UZUN, positionSlots, posLabel, posIcon, venueModeLabel, costModeLabel, teamLabel, VARMISIN_OPTIONS, PAYMENT_LABEL, paymentSummary, formatLabel, relInfo, eventPhase } from "../data";
 import { parseRoster } from "../roster";
 import { Avatar, Stars, SquadDots, EksikBadge, BACK_ICON } from "../components";
 
@@ -137,7 +137,7 @@ export default function EventDetailScreen({ onUpdateDesc = null, onUpdateNeeds =
             <View style={{ height: 6, backgroundColor: C.chalk, borderRadius: 3, marginTop: 10, overflow: "hidden" }}>
               <View style={{ height: 6, width: `${Math.min(100, Math.round((ev.filled / Math.max(1, ev.capacity)) * 100))}%`, backgroundColor: ev.filled >= ev.capacity ? C.pitch : C.kit, borderRadius: 3 }} />
             </View>
-            {ev.mine && onUpdateNeeds && (POSITIONS[ev.cat] || []).length > 0 && (
+            {ev.mine && onUpdateNeeds && positionSlots(ev.cat).length > 0 && (
               <View style={{ marginTop: 10 }}>
                 {!ihEdit ? (
                   <TouchableOpacity onPress={() => { setIhtiyac({ ...(ev.needs || {}) }); setIhEdit(true); }}
@@ -147,7 +147,7 @@ export default function EventDetailScreen({ onUpdateDesc = null, onUpdateNeeds =
                   </TouchableOpacity>
                 ) : (
                   <View style={{ backgroundColor: C.chalk, borderRadius: 12, padding: 10 }}>
-                    {(POSITIONS[ev.cat] || []).map((p) => {
+                    {positionSlots(ev.cat).map((p) => {
                       const n = (ihtiyac || {})[p.id] || 0;
                       const toplam = Object.values(ihtiyac || {}).reduce((x, y) => x + y, 0);
                       return (
@@ -236,10 +236,10 @@ export default function EventDetailScreen({ onUpdateDesc = null, onUpdateNeeds =
               <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
                 <TextInput value={guestName} onChangeText={setGuestName} placeholder={t("Ad Soyad")}
                   placeholderTextColor={C.placeholder} style={[st.input, { flex: 1 }]} returnKeyType="done" />
-                {(POSITIONS[ev.cat] || []).length > 0 && (
+                {positionSlots(ev.cat).length > 0 && (
                   <TouchableOpacity onPress={() => Alert.alert(t("Mevki seç"), "", [
                     { text: "• " + t("Farketmez"), onPress: () => setGuestPos(null) },
-                    ...(POSITIONS[ev.cat] || []).map((p) => ({ text: p.icon + " " + t(p.label), onPress: () => setGuestPos(p.id) })),
+                    ...positionSlots(ev.cat).map((p) => ({ text: p.icon + " " + t(p.label), onPress: () => setGuestPos(p.id) })),
                     { text: t("Vazgeç"), style: "cancel" },
                   ])} style={[st.input, { minWidth: 96, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 4 }]}>
                     <Text style={{ fontSize: 12.5, fontWeight: "800", color: guestPos ? C.ink : C.faint }} numberOfLines={1}>

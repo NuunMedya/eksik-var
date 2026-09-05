@@ -954,7 +954,7 @@ export async function sendImage(meId, conversationId, uri) {
 }
 export async function sendVoiceMessage(meId, conversationId, uri, sec) {
   const blob = await (await fetch(uri)).blob();
-  const path = `${meId}/ses-${conversationId}-${Date.now()}.m4a`;
+  const path = `voice/${conversationId}-${Date.now()}.m4a`;
   const { error: e1 } = await supabase.storage.from("chat").upload(path, blob, { contentType: "audio/m4a", upsert: true });
   if (e1) throw e1;
   const url = supabase.storage.from("chat").getPublicUrl(path).data.publicUrl;

@@ -8,7 +8,7 @@ import { t } from "../i18n";
 import { C, onThemeChange } from "../theme";
 import { senderColor, REACTION_EMOJIS, myReaction, reactionList, replyPreview } from "../data";
 import { Avatar, BACK_ICON } from "../components";
-import { useAudioRecorder, RecordingPresets, AudioModule, createAudioPlayer } from "expo-audio";
+import { Audio } from "expo-av";
 import { PollSheet } from "./sheets";
 import { pollVoters, extractIban } from "../data";
 import { Modal } from "react-native";
@@ -28,49 +28,40 @@ export default function ChatRoomScreen({
   const [showPoll, setShowPoll] = useState(false);
   const [input, setInput] = useState("");
   const listRef = useRef(null);
-  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [rec, setRec] = useState(null);
   const [recSec, setRecSec] = useState(0);
   const recTimer = useRef(null);
   const [playingId, setPlayingId] = useState(null);
   const soundRef = useRef(null);
-  const sesParse = (m) => {
-    const t0 = m.text || "";
-    const k = t0.indexOf("VOICE|");
-    if (k === -1 || k > 6) return null;
-    const p = t0.slice(k + 6).split("|");
-    return p[0] && p[0].startsWith("http") ? { url: p[0], sec: p[1] || "0" } : null;
-  };
+  const sesParse = (m) => (m.text && m.text.startsWith("\u{1F399}VOICE|")) ? m.text.split("|") : null;
   const kayitBaslat = async () => {
     try {
-      const izin = await AudioModule.requestRecordingPermissionsAsync();
+      const izin = await Audio.requestPermissionsAsync();
       if (!izin.granted) return;
-      await AudioModule.setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
-      await recorder.prepareToRecordAsync();
-      recorder.record();
-      setRec(true); setRecSec(0);
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+      const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      setRec(recording); setRecSec(0);
       recTimer.current = setInterval(() => setRecSec((x) => x + 1), 1000);
     } catch {}
   };
   const kayitBitir = async (gonder) => {
     clearInterval(recTimer.current);
-    if (!rec) return;
-    setRec(null);
+    const r = rec; setRec(null);
+    if (!r) return;
     try {
-      await recorder.stop();
-      await AudioModule.setAudioModeAsync({ allowsRecording: false });
-      const uri = recorder.uri;
-      if (gonder && onSendVoice && uri) onSendVoice(chat.id, uri, recSec);
+      await r.stopAndUnloadAsync();
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+      if (gonder && onSendVoice) onSendVoice(chat.id, r.getURI(), recSec);
     } catch {}
   };
   const sesOynat = async (m, url) => {
     try {
-      if (soundRef.current) { try { soundRef.current.remove(); } catch {} soundRef.current = null; }
+      if (soundRef.current) { await soundRef.current.unloadAsync().catch(() => {}); soundRef.current = null; }
       if (playingId === m.id) { setPlayingId(null); return; }
-      const player = createAudioPlayer({ uri: url });
-      player.addListener("playbackStatusUpdate", (st2) => { if (st2.didJustFinish) setPlayingId(null); });
-      player.play();
-      soundRef.current = player; setPlayingId(m.id);
+      const { sound } = await Audio.Sound.createAsync({ uri: url }, { shouldPlay: true }, (st2) => {
+        if (st2.didJustFinish) setPlayingId(null);
+      });
+      soundRef.current = sound; setPlayingId(m.id);
     } catch { setPlayingId(null); }
   };
 
@@ -290,13 +281,13 @@ export default function ChatRoomScreen({
           )}
           {m.replyTo && <ReplyQuote r={m.replyTo} />}
           {sesParse(m) ? (
-            <TouchableOpacity onPress={() => sesOynat(m, sesParse(m).url)} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 4, minWidth: 150 }}>
+            <TouchableOpacity onPress={() => sesOynat(m, sesParse(m)[1])} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 4, minWidth: 150 }}>
               <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: C.pitch, alignItems: "center", justifyContent: "center" }}>
                 <Ionicons name={playingId === m.id ? "pause" : "play"} size={17} color="#fff" />
               </View>
               <View style={{ flex: 1 }}>
                 <View style={{ height: 3, backgroundColor: "rgba(0,0,0,0.12)", borderRadius: 2 }} />
-                <Text style={{ fontSize: 11, color: C.faint, marginTop: 4 }}>{"\u{1F399}"} {t("Sesli mesaj")} · 0:{String(sesParse(m).sec).padStart(2, "0")}</Text>
+                <Text style={{ fontSize: 11, color: C.faint, marginTop: 4 }}>{"\u{1F399}"} {t("Sesli mesaj")} · 0:{String(sesParse(m)[2] || "0").padStart(2, "0")}</Text>
               </View>
             </TouchableOpacity>
           ) : (

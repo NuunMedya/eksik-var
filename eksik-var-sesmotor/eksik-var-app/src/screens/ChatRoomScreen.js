@@ -34,13 +34,7 @@ export default function ChatRoomScreen({
   const recTimer = useRef(null);
   const [playingId, setPlayingId] = useState(null);
   const soundRef = useRef(null);
-  const sesParse = (m) => {
-    const t0 = m.text || "";
-    const k = t0.indexOf("VOICE|");
-    if (k === -1 || k > 6) return null;
-    const p = t0.slice(k + 6).split("|");
-    return p[0] && p[0].startsWith("http") ? { url: p[0], sec: p[1] || "0" } : null;
-  };
+  const sesParse = (m) => (m.text && m.text.startsWith("\u{1F399}VOICE|")) ? m.text.split("|") : null;
   const kayitBaslat = async () => {
     try {
       const izin = await AudioModule.requestRecordingPermissionsAsync();
@@ -290,13 +284,13 @@ export default function ChatRoomScreen({
           )}
           {m.replyTo && <ReplyQuote r={m.replyTo} />}
           {sesParse(m) ? (
-            <TouchableOpacity onPress={() => sesOynat(m, sesParse(m).url)} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 4, minWidth: 150 }}>
+            <TouchableOpacity onPress={() => sesOynat(m, sesParse(m)[1])} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 4, minWidth: 150 }}>
               <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: C.pitch, alignItems: "center", justifyContent: "center" }}>
                 <Ionicons name={playingId === m.id ? "pause" : "play"} size={17} color="#fff" />
               </View>
               <View style={{ flex: 1 }}>
                 <View style={{ height: 3, backgroundColor: "rgba(0,0,0,0.12)", borderRadius: 2 }} />
-                <Text style={{ fontSize: 11, color: C.faint, marginTop: 4 }}>{"\u{1F399}"} {t("Sesli mesaj")} · 0:{String(sesParse(m).sec).padStart(2, "0")}</Text>
+                <Text style={{ fontSize: 11, color: C.faint, marginTop: 4 }}>{"\u{1F399}"} {t("Sesli mesaj")} · 0:{String(sesParse(m)[2] || "0").padStart(2, "0")}</Text>
               </View>
             </TouchableOpacity>
           ) : (

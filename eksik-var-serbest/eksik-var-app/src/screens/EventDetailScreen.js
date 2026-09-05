@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, TextInput, Modal, StyleSheet,
 import { Ionicons } from "@expo/vector-icons";
 import { t } from "../i18n";
 import { C, onThemeChange } from "../theme";
-import { CATEGORIES, POSITIONS, GUNLER_UZUN, positionSlots, posLabel, posIcon, venueModeLabel, costModeLabel, teamLabel, VARMISIN_OPTIONS, PAYMENT_LABEL, paymentSummary, formatLabel, relInfo, eventPhase } from "../data";
+import { CATEGORIES, GUNLER_UZUN, positionSlots, posLabel, posIcon, venueModeLabel, costModeLabel, teamLabel, VARMISIN_OPTIONS, PAYMENT_LABEL, paymentSummary, formatLabel, relInfo, eventPhase } from "../data";
 import { parseRoster } from "../roster";
 import { Avatar, Stars, SquadDots, EksikBadge, BACK_ICON } from "../components";
 
@@ -137,7 +137,7 @@ export default function EventDetailScreen({ onUpdateDesc = null, onUpdateNeeds =
             <View style={{ height: 6, backgroundColor: C.chalk, borderRadius: 3, marginTop: 10, overflow: "hidden" }}>
               <View style={{ height: 6, width: `${Math.min(100, Math.round((ev.filled / Math.max(1, ev.capacity)) * 100))}%`, backgroundColor: ev.filled >= ev.capacity ? C.pitch : C.kit, borderRadius: 3 }} />
             </View>
-            {ev.mine && onUpdateNeeds && (POSITIONS[ev.cat] || []).length > 0 && (
+            {ev.mine && onUpdateNeeds && positionSlots(ev.cat).length > 0 && (
               <View style={{ marginTop: 10 }}>
                 {!ihEdit ? (
                   <TouchableOpacity onPress={() => { setIhtiyac({ ...(ev.needs || {}) }); setIhEdit(true); }}
@@ -147,7 +147,7 @@ export default function EventDetailScreen({ onUpdateDesc = null, onUpdateNeeds =
                   </TouchableOpacity>
                 ) : (
                   <View style={{ backgroundColor: C.chalk, borderRadius: 12, padding: 10 }}>
-                    {(POSITIONS[ev.cat] || []).map((p) => {
+                    {positionSlots(ev.cat).map((p) => {
                       const n = (ihtiyac || {})[p.id] || 0;
                       const toplam = Object.values(ihtiyac || {}).reduce((x, y) => x + y, 0);
                       return (
@@ -234,24 +234,21 @@ export default function EventDetailScreen({ onUpdateDesc = null, onUpdateNeeds =
             {ev.mine && phase !== "tamamlandi" && (
               <>
               <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
-                <TextInput value={guestName} onChangeText={setGuestName} placeholder={t("Ad Soyad")}
-                  placeholderTextColor={C.placeholder} style={[st.input, { flex: 1 }]} returnKeyType="done" />
-                {(POSITIONS[ev.cat] || []).length > 0 && (
-                  <TouchableOpacity onPress={() => Alert.alert(t("Mevki seç"), "", [
-                    { text: "• " + t("Farketmez"), onPress: () => setGuestPos(null) },
-                    ...(POSITIONS[ev.cat] || []).map((p) => ({ text: p.icon + " " + t(p.label), onPress: () => setGuestPos(p.id) })),
-                    { text: t("Vazgeç"), style: "cancel" },
-                  ])} style={[st.input, { minWidth: 96, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 4 }]}>
-                    <Text style={{ fontSize: 12.5, fontWeight: "800", color: guestPos ? C.ink : C.faint }} numberOfLines={1}>
-                      {guestPos ? posIcon(guestPos) + " " + posLabel(guestPos) : t("Mevki")}
-                    </Text>
-                    <Ionicons name="chevron-down" size={12} color={C.faint} />
-                  </TouchableOpacity>
-                )}
+                <TextInput value={guestName} onChangeText={setGuestName} maxLength={40} placeholder={t("Ad Soyad")} placeholderTextColor={C.placeholder} style={[st.scoreInput, { flex: 1, width: undefined, fontSize: 14, fontWeight: "600", textAlign: "left", paddingHorizontal: 12 }]} />
                 <TouchableOpacity disabled={guestName.trim().length < 2} onPress={() => { onAddGuest(ev.id, guestName.trim(), guestPos); setGuestName(""); setGuestPos(null); }} style={[st.btn, { backgroundColor: C.turf, paddingHorizontal: 14, paddingVertical: 10 }, guestName.trim().length < 2 && { opacity: 0.4 }]}>
                   <Text style={[st.btnText, { color: "#fff" }]}>{t("Ekle")}</Text>
                 </TouchableOpacity>
               </View>
+              {(positionSlots(ev.cat) || []).length > 0 && (
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                  {[{ id: null, label: "Farketmez", icon: "•" }, ...positionSlots(ev.cat)].map((p) => (
+                    <TouchableOpacity key={String(p.id)} onPress={() => setGuestPos(p.id)}
+                      style={{ borderRadius: 999, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 5, borderColor: guestPos === p.id ? C.turf : C.line, backgroundColor: guestPos === p.id ? C.turf : C.chalk }}>
+                      <Text style={{ fontSize: 11, fontWeight: "800", color: guestPos === p.id ? "#fff" : C.turfText }}>{p.icon} {t(p.label)}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
               </>
             )}
           </View>

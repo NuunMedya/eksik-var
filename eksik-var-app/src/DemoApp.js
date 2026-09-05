@@ -1077,7 +1077,7 @@ export default function DemoApp() {
                 availability={(() => { const a = availabilityFor(activeEvent, chats); if (a) a.suggested = Math.max(a.suggested - guestPlayers(activeEvent).length, activeEvent.filled, 0); return a; })()}
                 onAskAvailability={askAvailability} onApplySuggested={applySuggested} onAnswer={answerAvailability}
                 onRecordScore={recordScore} myMvpVote={mvpVotes[activeEvent.id] || null}
-                onClaimPayment={claimPayment} onConfirmPayment={confirmPayment} onSendIban={sendIban} onRemindPayments={remindPayments} onCopyIban={copyIbanFor}
+                paymentDetails={paymentDetails} onSaveIban={(x) => { setPaymentDetails(x); showToast(t("Ödeme bilgilerin kaydedildi 💳")); }} onClaimPayment={claimPayment} onConfirmPayment={confirmPayment} onSendIban={sendIban} onRemindPayments={remindPayments} onCopyIban={copyIbanFor}
                 onCalendar={calendarFor} onDirections={directionsFor} onAddGuest={addGuest} onAddGuests={(evId, list) => list.forEach((p) => addGuest(evId, p.name, p.gk))} onRepeat={(ev) => setView({ name: "create", repeat: true, initial: cloneForRepeat(ev) })} onRemoveGuest={removeGuest} onToggleGuest={toggleGuest}
                 onCheckIn={checkIn} onConfirmAllPayments={confirmAllPayments}
                 statRoster={rosterWithGuests(activeEvent).filter((m) => (activeEvent.attendance || {})[m.id] !== "gelmedi")} onSetStat={setStat} onShareSummary={shareSummary}

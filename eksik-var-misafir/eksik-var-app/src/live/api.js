@@ -952,14 +952,6 @@ export async function sendImage(meId, conversationId, uri) {
   const { error } = await supabase.from("messages").insert({ conversation_id: conversationId, sender_id: meId, type: "resim", image_url: url });
   if (error) throw error;
 }
-export async function sendVoiceMessage(meId, conversationId, uri, sec) {
-  const blob = await (await fetch(uri)).blob();
-  const path = `${meId}/ses-${conversationId}-${Date.now()}.m4a`;
-  const { error: e1 } = await supabase.storage.from("chat").upload(path, blob, { contentType: "audio/m4a", upsert: true });
-  if (e1) throw e1;
-  const url = supabase.storage.from("chat").getPublicUrl(path).data.publicUrl;
-  return sendMessage(meId, conversationId, `\u{1F399}VOICE|${url}|${Math.max(1, Math.round(sec))}`);
-}
 export async function olderMessages(conversationId, beforeDbId) {
   const { data, error } = await supabase.from("messages").select("id, sender_id, type, content, image_url, created_at, poll_id, reply_to_id, users!messages_sender_id_fkey(full_name), message_reactions(user_id, emoji)")
     .eq("conversation_id", conversationId).lt("id", beforeDbId).order("id", { ascending: false }).limit(50);
