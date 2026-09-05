@@ -50,11 +50,7 @@ export default function ChatsScreen({ chats, onOpen, onNew = null, onMute = null
         contentContainerStyle={{ paddingBottom: 110 }}
         renderItem={({ item: c }) => {
           const last = c.msgs[c.msgs.length - 1];
-          const okunur = (m0) => {
-            if (m0 && m0.indexOf("VOICE|") > -1 && m0.indexOf("VOICE|") < 7) return "\u{1F399} " + t("Sesli mesaj");
-            if (m0 && m0.indexOf("KONUM|") > -1 && m0.indexOf("KONUM|") < 7) return "\u{1F4CD} " + t("Konum");
-            return m0;
-          };
+          const okunur = (m0) => (m0 && m0.indexOf("VOICE|") > -1 && m0.indexOf("VOICE|") < 7) ? "\u{1F399} " + t("Sesli mesaj") : m0;
           const preview =
             last?.from === "sys"
               ? last.text

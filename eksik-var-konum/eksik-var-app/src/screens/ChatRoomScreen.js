@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import {
   View, Text, TouchableOpacity, TextInput, FlatList,
-  KeyboardAvoidingView, Platform, Image, StyleSheet, Keyboard, Alert,
+  KeyboardAvoidingView, Platform, Image, StyleSheet,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { t } from "../i18n";
@@ -10,7 +10,6 @@ import { senderColor, REACTION_EMOJIS, myReaction, reactionList, replyPreview } 
 import { Avatar, BACK_ICON } from "../components";
 import { useAudioRecorder, RecordingPresets, AudioModule, createAudioPlayer } from "expo-audio";
 import * as Location from "expo-location";
-import MapView from "react-native-maps";
 import { Linking } from "react-native";
 import { PollSheet } from "./sheets";
 import { pollVoters, extractIban } from "../data";
@@ -45,40 +44,13 @@ export default function ChatRoomScreen({
     const la = Number(p[0]), ln = Number(p[1]);
     return isFinite(la) && isFinite(ln) ? { lat: la, lng: ln } : null;
   };
-  const [konumSec, setKonumSec] = useState(null);   // {benim:{lat,lng,acc}} | null
-  const [merkez, setMerkez] = useState(null);
-  const [adresQ, setAdresQ] = useState("");
-  const konumMapRef = useRef(null);
   const konumGonder = async () => {
     try {
       const izin = await Location.requestForegroundPermissionsAsync();
       if (!izin.granted) return;
       const p = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      const b = { lat: p.coords.latitude, lng: p.coords.longitude, acc: Math.round(p.coords.accuracy || 0) };
-      setMerkez({ lat: b.lat, lng: b.lng });
-      setAdresQ("");
-      setKonumSec({ benim: b });
+      onSend(chat.id, "\u{1F4CD}KONUM|" + p.coords.latitude.toFixed(6) + "|" + p.coords.longitude.toFixed(6));
     } catch {}
-  };
-  const konumYolla = (la, ln) => {
-    setKonumSec(null);
-    onSend(chat.id, "\u{1F4CD}KONUM|" + la.toFixed(6) + "|" + ln.toFixed(6));
-  };
-  const adresAra = async () => {
-    const q = adresQ.trim(); if (!q) return;
-    Keyboard.dismiss();
-    try {
-      let r = await Location.geocodeAsync(q);
-      if (!(r && r[0])) r = await Location.geocodeAsync(q + ", Ankara");
-      if (r && r[0] && konumMapRef.current) {
-        konumMapRef.current.animateToRegion({ latitude: r[0].latitude, longitude: r[0].longitude, latitudeDelta: 0.015, longitudeDelta: 0.015 }, 500);
-      } else {
-        Alert.alert("\u{1F50D} " + t("Adres bulunamadı"),
-          t("Mahalle, cadde ya da açık adres yaz (işletme adları çıkmayabilir). Sahayı işaretlemek için haritayı kaydırıp \u{1F3AF} iğneyi noktaya getir."));
-      }
-    } catch {
-      Alert.alert("\u{1F50D} " + t("Adres bulunamadı"), t("Bağlantıyı kontrol edip tekrar dene."));
-    }
   };
   const konumAc = (k) => {
     const url = Platform.OS === "ios"
@@ -513,52 +485,6 @@ export default function ChatRoomScreen({
         </View>
         )}
         </View>
-      )}
-      {konumSec && (
-        <Modal visible animationType="slide" onRequestClose={() => setKonumSec(null)}>
-          <View style={{ flex: 1, backgroundColor: C.chalk }}>
-            <View style={{ backgroundColor: C.turf, paddingTop: 56, paddingBottom: 10, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 10 }}>
-              <TouchableOpacity onPress={() => setKonumSec(null)} style={{ padding: 4 }}>
-                <Ionicons name="close" size={24} color="#fff" />
-              </TouchableOpacity>
-              <Text style={{ color: "#fff", fontWeight: "900", fontSize: 17, flex: 1 }}>{t("Konum gönder")}</Text>
-            </View>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: C.surface, margin: 12, marginBottom: 0, borderRadius: 14, paddingHorizontal: 12, borderWidth: 1, borderColor: C.line }}>
-              <Ionicons name="search" size={16} color={C.faint} />
-              <TextInput value={adresQ} onChangeText={setAdresQ} placeholder={t("Adres ara…")} placeholderTextColor={C.placeholder}
-                style={{ flex: 1, fontSize: 14, color: C.ink, paddingVertical: 9 }} returnKeyType="search" onSubmitEditing={adresAra} />
-            </View>
-            <View style={{ flex: 1, marginTop: 10 }}>
-              <MapView ref={konumMapRef} style={{ flex: 1 }}
-                initialRegion={{ latitude: konumSec.benim.lat, longitude: konumSec.benim.lng, latitudeDelta: 0.01, longitudeDelta: 0.01 }}
-                showsUserLocation
-                onPress={() => Keyboard.dismiss()}
-                onRegionChangeComplete={(r) => setMerkez({ lat: r.latitude, lng: r.longitude })} />
-              <View pointerEvents="none" style={{ position: "absolute", top: "50%", left: "50%", marginLeft: -16, marginTop: -30, alignItems: "center" }}>
-                <Text style={{ fontSize: 32 }}>{"\u{1F4CD}"}</Text>
-              </View>
-              <TouchableOpacity onPress={() => konumMapRef.current && konumMapRef.current.animateToRegion({ latitude: konumSec.benim.lat, longitude: konumSec.benim.lng, latitudeDelta: 0.01, longitudeDelta: 0.01 }, 400)}
-                style={{ position: "absolute", right: 14, bottom: 14, width: 44, height: 44, borderRadius: 22, backgroundColor: "#fff", alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 4 }}>
-                <Ionicons name="locate" size={22} color={C.turfText} />
-              </TouchableOpacity>
-            </View>
-            <View style={{ padding: 14, paddingBottom: 30, gap: 9, backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20 }}>
-              <TouchableOpacity onPress={() => konumYolla(konumSec.benim.lat, konumSec.benim.lng)}
-                style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: C.turf, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 13 }}>
-                <Ionicons name="navigate" size={19} color="#fff" />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: "#fff", fontWeight: "900", fontSize: 14 }}>{t("Mevcut konumu gönder")}</Text>
-                  <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 11.5 }}>{konumSec.benim.acc ? konumSec.benim.acc + t("m'ye kadar doğru") : t("GPS konumun")}</Text>
-                </View>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => merkez && konumYolla(merkez.lat, merkez.lng)}
-                style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: C.pitchSoft, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 13 }}>
-                <Text style={{ fontSize: 17 }}>{"\u{1F3AF}"}</Text>
-                <Text style={{ flex: 1, fontWeight: "900", fontSize: 14, color: C.turfText }}>{t("Haritadaki noktayı gönder")}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
       )}
       {msgSheet && <MsgSheet m={msgSheet} />}
       <PollSheet visible={showPoll} onClose={() => setShowPoll(false)} onSend={(q, options, multiple) => { setShowPoll(false); onCreatePoll(chat.id, q, options, multiple); }} />

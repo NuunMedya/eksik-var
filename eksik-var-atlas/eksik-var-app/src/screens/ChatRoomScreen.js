@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import {
   View, Text, TouchableOpacity, TextInput, FlatList,
-  KeyboardAvoidingView, Platform, Image, StyleSheet, Keyboard, Alert,
+  KeyboardAvoidingView, Platform, Image, StyleSheet, Keyboard,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { t } from "../i18n";
@@ -66,19 +66,13 @@ export default function ChatRoomScreen({
   };
   const adresAra = async () => {
     const q = adresQ.trim(); if (!q) return;
-    Keyboard.dismiss();
     try {
-      let r = await Location.geocodeAsync(q);
-      if (!(r && r[0])) r = await Location.geocodeAsync(q + ", Ankara");
+      const r = await Location.geocodeAsync(q);
       if (r && r[0] && konumMapRef.current) {
-        konumMapRef.current.animateToRegion({ latitude: r[0].latitude, longitude: r[0].longitude, latitudeDelta: 0.015, longitudeDelta: 0.015 }, 500);
-      } else {
-        Alert.alert("\u{1F50D} " + t("Adres bulunamadı"),
-          t("Mahalle, cadde ya da açık adres yaz (işletme adları çıkmayabilir). Sahayı işaretlemek için haritayı kaydırıp \u{1F3AF} iğneyi noktaya getir."));
+        Keyboard.dismiss();
+        konumMapRef.current.animateToRegion({ latitude: r[0].latitude, longitude: r[0].longitude, latitudeDelta: 0.02, longitudeDelta: 0.02 }, 500);
       }
-    } catch {
-      Alert.alert("\u{1F50D} " + t("Adres bulunamadı"), t("Bağlantıyı kontrol edip tekrar dene."));
-    }
+    } catch {}
   };
   const konumAc = (k) => {
     const url = Platform.OS === "ios"
