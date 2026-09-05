@@ -185,7 +185,6 @@ export default function LiveApp() {
     const [rows, tk] = await Promise.all([api.listClub(user.city), api.myTeam(meId)]);
     setClubRows(rows); setMyTeamRow(tk);
   } catch { /* sessiz */ } };
-  const [venueSeed, setVenueSeed] = useState("");
   const [favSahalar, setFavSahalar] = useState([]);
   const favYenile = () => api.listSavedVenues(meId).then(setFavSahalar).catch(() => {});
   useEffect(() => { favYenile(); }, []);
@@ -499,9 +498,6 @@ export default function LiveApp() {
   const rejectApp = async (appId) => { try { await api.setApplication(appId, { status: "reddedildi" }); await refreshApps(); } catch (e) { fail(e); } };
   const creatingRef = useRef(false);          // çift dokunuş kilidi
   const createEvent = async (f) => {
-    const baslik = (f.title || "").trim();
-    if (baslik.length < 3) { showToast(t("✍️ Başlık en az 3 harf olmalı — örn. \u201COstim akşam maçı\u201D")); return; }
-    if (baslik.length > 60) { showToast(t("✍️ Başlık en fazla 60 harf olabilir")); return; }
     if (creatingRef.current) return;
     creatingRef.current = true;
     try {
@@ -912,7 +908,7 @@ export default function LiveApp() {
 
           {activeEvent && (
             <View style={StyleSheet.absoluteFill}>
-              <EventDetailScreen onPinVenue={(e2) => { setHubCat(e2.cat); setVenueSeed(e2.venue || ""); setVenueHub(true); }} ev={activeEvent} apps={apps} myApp={myAppFor(activeEvent.id)} roster={activeEvent.ended ? rosterFor(activeEvent) : []}
+              <EventDetailScreen ev={activeEvent} apps={apps} myApp={myAppFor(activeEvent.id)} roster={activeEvent.ended ? rosterFor(activeEvent) : []}
                 onAttendance={(id) => setView({ name: "attendance", id })} onDispute={disputeAttendance} onShare={shareEvent}
                 onEdit={(id) => setView({ name: "create", id })} onCancel={cancelEvent} onLeave={leaveEvent}
                 onRate={(id) => setView({ name: "rate", id })} rated={ratedEvents.includes(activeEvent.id)}
@@ -1068,7 +1064,7 @@ export default function LiveApp() {
           <PickerSheet visible={!!reportTarget} title={reportTarget ? `${reportTarget.name.split(" ")[0]} için şikayet nedeni` : "Şikayet"}
             items={REPORT_REASONS.map((r) => r.label)} value={null} onSelect={submitReport} onClose={() => setReportTarget(null)} placeholder={t("Neden ara…")} />
 
-          <VenueSheet key={"hub" + hubCat} cat={hubCat} onCat={setHubCat} visible={venueHub} onClose={() => { setVenueHub(false); setVenueSeed(""); }} initialQ={venueSeed} cityName={user.city}
+          <VenueSheet key={"hub" + hubCat} cat={hubCat} onCat={setHubCat} visible={venueHub} onClose={() => setVenueHub(false)} cityName={user.city}
             categoryName={(CATEGORIES.find((c) => c.id === hubCat) || {}).name || ""}
             onList={(q) => api.listVenues(user.city, hubCat, q)}
             onAdd={(name, lat, lng) => api.addVenue(meId, user.city, hubCat, name, lat, lng)}
