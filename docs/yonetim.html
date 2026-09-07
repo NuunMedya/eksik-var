@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Eksik Var — Yönetim Paneli</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--ink:#17251C;--muted:#55655B;--pitch:#0B3D2E;--turf:#0E6B3C;--orange:#F05A22;
+        --line:#D8E4DB;--paper:#F2F5F1;--card:#FFFFFF;--cream:#F2EEE3;--red:#B3261E;--amber:#B26A00;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Archivo',system-ui,sans-serif;background:var(--paper);color:var(--ink);font-size:15px}
+  button{font-family:inherit;cursor:pointer;border:none;border-radius:10px;font-weight:700}
+  input,select{font-family:inherit;font-size:15px;border:1px solid var(--line);border-radius:10px;
+        padding:10px 12px;background:#fff;color:var(--ink);letter-spacing:0}
+  input:focus{outline:2px solid var(--turf)}
+  .hide{display:none!important}
+  /* ---- giriş ---- */
+  .loginwrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--pitch);padding:20px}
+  .logincard{background:#fff;border-radius:20px;padding:30px 26px;width:100%;max-width:400px}
+  .wordmark{font-weight:800;font-size:22px;color:var(--pitch)}
+  .wordmark span{color:var(--orange)}
+  .sub{color:var(--muted);font-size:13px;margin:4px 0 20px}
+  .logincard input{width:100%;margin-bottom:12px}
+  .btn{background:var(--turf);color:#fff;padding:12px 16px;width:100%;font-size:15px}
+  .btn:disabled{opacity:.5}
+  .err{background:#FBE9E7;color:var(--red);border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:12px}
+  .lnk{background:none;color:var(--muted);font-size:13px;margin-top:12px;text-decoration:underline}
+  /* ---- uygulama ---- */
+  header{background:var(--pitch);color:#fff;padding:14px 18px;display:flex;align-items:center;gap:12px}
+  header .wordmark{color:#fff;font-size:17px}
+  header .who{margin-left:auto;font-size:13px;color:#CFE3D8}
+  header .out{background:rgba(255,255,255,.14);color:#fff;padding:8px 12px;font-size:13px}
+  nav{display:flex;gap:6px;padding:12px 18px;background:#fff;border-bottom:1px solid var(--line);flex-wrap:wrap;
+      position:sticky;top:0;z-index:5}
+  nav button{background:#EEF4EF;color:var(--pitch);padding:9px 14px;font-size:14px}
+  nav button.on{background:var(--pitch);color:#fff}
+  main{max-width:1080px;margin:0 auto;padding:18px}
+  .cardrow{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .stat b{font-size:28px;display:block}
+  .stat span{color:var(--muted);font-size:13px}
+  .stat.warn b{color:var(--orange)}
+  .toolbar{display:flex;gap:10px;margin:6px 0 14px;flex-wrap:wrap;align-items:center}
+  .toolbar input{flex:1;min-width:220px}
+  .chipbtn{background:#EEF4EF;color:var(--pitch);padding:9px 14px;font-size:13px}
+  .chipbtn.on{background:var(--turf);color:#fff}
+  .item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px}
+  .item h4{font-size:15px;margin-bottom:2px}
+  .meta{color:var(--muted);font-size:12.5px}
+  .desc{background:var(--paper);border-radius:10px;padding:10px 12px;font-size:14px;margin:8px 0}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .row button{padding:8px 12px;font-size:12.5px}
+  .b-gri{background:#EEF4EF;color:var(--pitch)}
+  .b-tur{background:var(--turf);color:#fff}
+  .b-sar{background:#FDF1E3;color:var(--amber)}
+  .b-kir{background:#FBE9E7;color:var(--red)}
+  .badge{display:inline-block;padding:3px 9px;border-radius:99px;font-size:11.5px;font-weight:800;vertical-align:middle}
+  .s-aktif{background:#E3F1E8;color:var(--turf)} .s-askida{background:#FDF1E3;color:var(--amber)}
+  .s-banli{background:#FBE9E7;color:var(--red)}  .s-bekliyor{background:#FDF1E3;color:var(--amber)}
+  .s-incelendi{background:#E3F1E8;color:var(--turf)} .s-kapatildi{background:#ECEFF1;color:var(--muted)}
+  .s-acik{background:#E3F1E8;color:var(--turf)} .s-doldu{background:#E3EDF7;color:#1A5AA0}
+  .s-iptal{background:#FBE9E7;color:var(--red)} .s-tamamlandi{background:#ECEFF1;color:var(--muted)}
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;
+         padding:11px 18px;border-radius:12px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;max-width:90%}
+  #toast.show{opacity:1}
+  .empty{color:var(--muted);text-align:center;padding:30px 0}
+  h3.sec{margin:18px 0 10px;font-size:16px}
+</style>
+</head>
+<body>
+
+<!-- GİRİŞ -->
+<div id="v-login" class="loginwrap">
+  <div class="logincard">
+    <div class="wordmark">EKSİK <span>VAR</span></div>
+    <div class="sub">Yönetim Paneli · yalnızca yöneticiler girebilir</div>
+    <div id="loginErr" class="err hide"></div>
+    <div id="stepPhone">
+      <input id="phone" placeholder="Telefon (05xx xxx xx xx)" inputmode="tel" autocomplete="tel">
+      <button class="btn" id="btnSend" onclick="sendCode()">SMS kodu gönder</button>
+    </div>
+    <div id="stepCode" class="hide">
+      <input id="code" placeholder="6 haneli kod" inputmode="numeric" maxlength="6">
+      <button class="btn" id="btnVerify" onclick="verifyCode()">Doğrula ve gir</button>
+      <button class="lnk" onclick="backToPhone()">Numarayı değiştir</button>
+    </div>
+  </div>
+</div>
+
+<!-- YETKİ YOK -->
+<div id="v-gate" class="loginwrap hide">
+  <div class="logincard">
+    <div class="wordmark">EKSİK <span>VAR</span></div>
+    <div class="sub" id="gateMsg">Yetki kontrol ediliyor…</div>
+    <button class="lnk" onclick="signOut()">Çıkış yap</button>
+  </div>
+</div>
+
+<!-- PANEL -->
+<div id="v-app" class="hide">
+  <header>
+    <div class="wordmark">EKSİK <span>VAR</span> · Yönetim</div>
+    <div class="who" id="whoami"></div>
+    <button class="out" onclick="signOut()">Çıkış</button>
+  </header>
+  <nav>
+    <button id="t-ozet" class="on" onclick="showTab('ozet')">📊 Özet</button>
+    <button id="t-sikayet" onclick="showTab('sikayet')">🚩 Şikâyetler</button>
+    <button id="t-kullanici" onclick="showTab('kullanici')">👥 Kullanıcılar</button>
+    <button id="t-icerik" onclick="showTab('icerik')">📋 İçerik</button>
+  </nav>
+  <main>
+    <section id="p-ozet"></section>
+    <section id="p-sikayet" class="hide">
+      <div class="toolbar">
+        <button class="chipbtn on" id="f-bekleyen" onclick="repFilter(true)">Bekleyenler</button>
+        <button class="chipbtn" id="f-tumu" onclick="repFilter(false)">Tümü</button>
+      </div>
+      <div id="repList"></div>
+    </section>
+    <section id="p-kullanici" class="hide">
+      <div class="toolbar">
+        <input id="uq" placeholder="İsim veya @kullanıcı adı ara…" onkeydown="if(event.key==='Enter')loadUsers()">
+        <button class="chipbtn on" onclick="loadUsers()">Ara</button>
+      </div>
+      <div id="userList"></div>
+    </section>
+    <section id="p-icerik" class="hide">
+      <h3 class="sec">⚽ Maç ilanları (son 30)</h3>
+      <div id="eventList"></div>
+      <h3 class="sec">🎯 Keşfet gönderileri (son 30)</h3>
+      <div id="postList"></div>
+    </section>
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SUPA_URL = "https://rxmngndtwndqbmlljhth.supabase.co";
+const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4bW5nbmR0d25kcWJtbGxqaHRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0MTU1ODksImV4cCI6MjEwMzk5MTU4OX0.ckpunuwIGPFBqil8VQVD3oVfE0Cb_maDfXqfok4AXkc";
+const db = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtD = (d) => d ? new Date(d).toLocaleString("tr-TR", {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}) : "—";
+const badge = (s) => `<span class="badge s-${esc(s)}">${esc(s)}</span>`;
+let toastT; function toast(m){ const t=$("toast"); t.textContent=m; t.classList.add("show");
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2600); }
+function loginErr(m){ const e=$("loginErr"); if(!m){e.classList.add("hide");return;} e.textContent=m; e.classList.remove("hide"); }
+
+/* ---------- telefon ---------- */
+let PHONE = "";
+function normPhone(v){
+  let d = String(v||"").replace(/\D/g,"");
+  if (d.startsWith("0")) d = d.slice(1);
+  if (!d.startsWith("90")) d = "90" + d;
+  return "+" + d;
+}
+
+/* ---------- giriş akışı ---------- */
+async function sendCode(){
+  loginErr(); PHONE = normPhone($("phone").value);
+  if (PHONE.length < 13) return loginErr("Geçerli bir numara gir (05xx xxx xx xx).");
+  $("btnSend").disabled = true;
+  const { error } = await db.auth.signInWithOtp({ phone: PHONE });
+  $("btnSend").disabled = false;
+  if (error) return loginErr("Kod gönderilemedi: " + error.message);
+  $("stepPhone").classList.add("hide"); $("stepCode").classList.remove("hide"); $("code").focus();
+}
+async function verifyCode(){
+  loginErr(); $("btnVerify").disabled = true;
+  const { error } = await db.auth.verifyOtp({ phone: PHONE, token: $("code").value.trim(), type: "sms" });
+  $("btnVerify").disabled = false;
+  if (error) return loginErr("Kod doğrulanamadı: " + error.message);
+  gate();
+}
+function backToPhone(){ $("stepCode").classList.add("hide"); $("stepPhone").classList.remove("hide"); loginErr(); }
+async function signOut(){ await db.auth.signOut(); location.reload(); }
+
+/* ---------- yetki kapısı ---------- */
+async function gate(){
+  $("v-login").classList.add("hide"); $("v-gate").classList.remove("hide");
+  $("gateMsg").textContent = "Yetki kontrol ediliyor…";
+  const { data, error } = await db.rpc("is_admin");
+  if (error) { $("gateMsg").textContent = "Kontrol başarısız: " + error.message; return; }
+  if (!data) { $("gateMsg").textContent = "Bu hesap yönetici değil. Kurucu hesabınla giriş yapmalısın."; return; }
+  const { data: s } = await db.auth.getUser();
+  $("whoami").textContent = s?.user?.phone ? "+" + s.user.phone : "";
+  $("v-gate").classList.add("hide"); $("v-app").classList.remove("hide");
+  showTab("ozet");
+}
+
+/* ---------- sekmeler ---------- */
+function showTab(t){
+  for (const k of ["ozet","sikayet","kullanici","icerik"]) {
+    $("p-"+k).classList.toggle("hide", k!==t);
+    $("t-"+k).classList.toggle("on", k===t);
+  }
+  if (t==="ozet") loadStats();
+  if (t==="sikayet") loadReports();
+  if (t==="kullanici") loadUsers();
+  if (t==="icerik") loadContent();
+}
+
+/* ---------- ÖZET ---------- */
+async function loadStats(){
+  $("p-ozet").innerHTML = '<div class="empty">Yükleniyor…</div>';
+  const { data, error } = await db.rpc("admin_stats");
+  if (error) return $("p-ozet").innerHTML = `<div class="empty">Hata: ${esc(error.message)}</div>`;
+  const k = data || {};
+  const card = (n, l, warn) => `<div class="stat ${warn&&n>0?"warn":""}"><b>${n ?? 0}</b><span>${l}</span></div>`;
+  $("p-ozet").innerHTML = `<div class="cardrow">
+    ${card(k.users, "Toplam kullanıcı")} ${card(k.users_today, "Bugün katılan")}
+    ${card(k.events_open, "Açık maç ilanı")} ${card(k.events_week, "Son 7 günde maç")}
+    ${card(k.reports_pending, "Bekleyen şikâyet", true)} ${card(k.disputes_pending, "Yoklama itirazı", true)}
+    ${card(k.suspended, "Askıda hesap", true)} ${card(k.banned, "Banlı hesap")}
+  </div>`;
+}
+
+/* ---------- ŞİKÂYETLER ---------- */
+let onlyPending = true;
+function repFilter(p){ onlyPending = p;
+  $("f-bekleyen").classList.toggle("on", p); $("f-tumu").classList.toggle("on", !p); loadReports(); }
+async function loadReports(){
+  $("repList").innerHTML = '<div class="empty">Yükleniyor…</div>';
+  let q = db.from("v_report_queue").select("*").order("created_at", { ascending:false }).limit(100);
+  if (onlyPending) q = q.eq("status", "bekliyor");
+  const { data, error } = await q;
+  if (error) return $("repList").innerHTML = `<div class="empty">Hata: ${esc(error.message)}</div>`;
+  if (!data.length) return $("repList").innerHTML = '<div class="empty">🎉 Kutu temiz — şikâyet yok.</div>';
+  $("repList").innerHTML = data.map(r => `
+    <div class="item">
+      <h4>🚩 ${esc(r.reason)} ${badge(r.status)} <span class="meta">· ${fmtD(r.created_at)}</span></h4>
+      <div class="meta">Şikâyet eden: <b>${esc(r.reporter_name||"?")}</b> (@${esc(r.reporter_username||"-")})
+        → Şikâyet edilen: <b>${esc(r.reported_name||"—")}</b> (@${esc(r.reported_username||"-")})
+        ${r.reported_status ? badge(r.reported_status) : ""}
+        ${r.total_reports>1 ? `· toplam ${r.total_reports} şikâyet` : ""}</div>
+      ${r.event_title ? `<div class="meta">Maç: ${esc(r.event_title)} · ${fmtD(r.event_date)}</div>` : ""}
+      ${r.description ? `<div class="desc">${esc(r.description)}</div>` : ""}
+      ${r.admin_note ? `<div class="meta">🗒 Not: ${esc(r.admin_note)}</div>` : ""}
+      ${r.status==="bekliyor" ? `<div class="row">
+        ${r.reason==="yoklama_itiraz" && r.event_id ? `<button class="b-tur" onclick="actRevert('${r.event_id}','${r.reporter_id}',${r.id})">✅ İtirazı kabul et</button>` : ""}
+        <button class="b-gri" onclick="actResolve(${r.id},'incelendi')">İncelendi</button>
+        <button class="b-gri" onclick="actResolve(${r.id},'kapatildi')">Kapat (işlem yok)</button>
+        ${r.reported_user_id ? `
+          <button class="b-sar" onclick="actSuspend('${r.reported_user_id}','${esc(r.reported_name||"")}')">⏸ Askıya al</button>
+          <button class="b-kir" onclick="actBan('${r.reported_user_id}','${esc(r.reported_name||"")}')">⛔ Banla</button>` : ""}
+      </div>` : ""}
+    </div>`).join("");
+}
+
+/* ---------- KULLANICILAR ---------- */
+async function loadUsers(){
+  $("userList").innerHTML = '<div class="empty">Yükleniyor…</div>';
+  const t = $("uq").value.trim().replace(/[%_,]/g,"");
+  let q = db.from("users").select("id, full_name, username, status, status_reason, suspended_until, created_at, rating_avg, rating_count, reliability_pct, no_show_count")
+            .order("created_at", { ascending:false }).limit(30);
+  if (t) q = q.or(`full_name.ilike.%${t}%,username.ilike.%${t}%`);
+  const { data, error } = await q;
+  if (error) return $("userList").innerHTML = `<div class="empty">Hata: ${esc(error.message)}</div>`;
+  if (!data.length) return $("userList").innerHTML = '<div class="empty">Sonuç yok.</div>';
+  $("userList").innerHTML = data.map(u => `
+    <div class="item">
+      <h4>${esc(u.full_name||"?")} <span class="meta">@${esc(u.username||"-")}</span> ${badge(u.status)}</h4>
+      <div class="meta">katılım ${fmtD(u.created_at)}
+        · ⭐ ${u.rating_avg ?? "—"} (${u.rating_count||0}) · güvenilirlik %${u.reliability_pct ?? "—"} · gelmedi: ${u.no_show_count||0}</div>
+      ${u.status!=="aktif" ? `<div class="meta">Sebep: ${esc(u.status_reason||"—")}${u.suspended_until ? " · bitiş: "+fmtD(u.suspended_until) : ""}</div>` : ""}
+      <div class="row">
+        ${u.status!=="banli" ? `<button class="b-sar" onclick="actSuspend('${u.id}','${esc(u.full_name||"")}')">⏸ Askıya al</button>
+        <button class="b-kir" onclick="actBan('${u.id}','${esc(u.full_name||"")}')">⛔ Banla</button>` : ""}
+        ${u.status!=="aktif" ? `<button class="b-tur" onclick="actReinstate('${u.id}','${esc(u.full_name||"")}')">↩️ Geri al (aktifleştir)</button>` : ""}
+      </div>
+    </div>`).join("");
+}
+
+/* ---------- İÇERİK ---------- */
+async function loadContent(){
+  $("eventList").innerHTML = $("postList").innerHTML = '<div class="empty">Yükleniyor…</div>';
+  const ev = await db.from("events")
+    .select("id, title, venue_name, event_date, status, created_at, organizer:users!organizer_id(full_name, username)")
+    .order("created_at", { ascending:false }).limit(30);
+  if (ev.error) $("eventList").innerHTML = `<div class="empty">Hata: ${esc(ev.error.message)}</div>`;
+  else if (!ev.data.length) $("eventList").innerHTML = '<div class="empty">Maç ilanı yok.</div>';
+  else $("eventList").innerHTML = ev.data.map(e => `
+    <div class="item">
+      <h4>${esc(e.title||"Maç")} ${badge(e.status)}</h4>
+      <div class="meta">📍 ${esc(e.venue_name||"—")} · 🗓 ${fmtD(e.event_date)} · kuran: ${esc(e.organizer?.full_name||"?")} (@${esc(e.organizer?.username||"-")})</div>
+      ${["acik","doldu"].includes(e.status) ? `<div class="row"><button class="b-kir" onclick="actCancelEvent('${e.id}','${esc(e.title||"")}')">🛑 Maçı iptal et</button></div>` : ""}
+    </div>`).join("");
+
+  const po = await db.from("posts")
+    .select("id, caption, image_url, archived, created_at, author:users!posts_user_id_fkey(full_name, username)")
+    .order("created_at", { ascending:false }).limit(30);
+  if (po.error) $("postList").innerHTML = `<div class="empty">Hata: ${esc(po.error.message)}</div>`;
+  else if (!po.data.length) $("postList").innerHTML = '<div class="empty">Gönderi yok.</div>';
+  else $("postList").innerHTML = po.data.map(p => `
+    <div class="item">
+      <h4>${esc(p.author?.full_name||"?")} <span class="meta">@${esc(p.author?.username||"-")} · ${fmtD(p.created_at)}</span>
+        ${p.archived ? '<span class="badge s-kapatildi">arşivde</span>' : ""}</h4>
+      ${p.caption ? `<div class="desc">${esc(p.caption)}</div>` : ""}
+      ${p.image_url ? `<div class="meta">🖼 görsel içeriyor</div>` : ""}
+      ${!p.archived ? `<div class="row"><button class="b-kir" onclick="actArchivePost('${p.id}')">🗄 Gönderiyi kaldır</button></div>` : ""}
+    </div>`).join("");
+}
+
+/* ---------- eylemler ---------- */
+async function run(fn, args, okMsg, reload){
+  const { error } = await db.rpc(fn, args);
+  if (error) return toast("Hata: " + error.message);
+  toast(okMsg); reload();
+}
+function actBan(id, name){
+  const r = prompt(`⛔ ${name} kalıcı olarak banlanacak. Sebep:`, "kural ihlali");
+  if (r === null) return;
+  run("ban_user", { p_user: id, p_reason: r || "kural ihlali" }, "Kullanıcı banlandı.", refreshCurrent);
+}
+function actSuspend(id, name){
+  const g = prompt(`⏸ ${name} kaç gün askıya alınsın?`, "7");
+  if (g === null) return;
+  run("suspend_user", { p_user: id, p_days: parseInt(g)||7, p_reason: "inceleme" }, "Kullanıcı askıya alındı.", refreshCurrent);
+}
+function actReinstate(id, name){
+  if (!confirm(`↩️ ${name} yeniden aktifleştirilsin mi?`)) return;
+  run("reinstate_user", { p_user: id }, "Kullanıcı aktifleştirildi.", refreshCurrent);
+}
+function actResolve(id, status){
+  const n = prompt(status==="incelendi" ? "Not (isteğe bağlı):" : "Kapatma notu (isteğe bağlı):", "");
+  if (n === null) return;
+  run("resolve_report", { p_report: id, p_status: status, p_note: n || null }, "Şikâyet güncellendi.", loadReports);
+}
+function actRevert(eventId, userId, reportId){
+  if (!confirm("İtiraz kabul edilsin mi? (gelmedi → katıldı)")) return;
+  db.rpc("revert_no_show", { p_event: eventId, p_user: userId }).then(({error}) => {
+    if (error) return toast("Hata: " + error.message);
+    run("resolve_report", { p_report: reportId, p_status: "incelendi", p_note: "itiraz kabul" }, "İtiraz kabul edildi.", loadReports);
+  });
+}
+function actCancelEvent(id, title){
+  if (!confirm(`🛑 "${title}" maçı iptal edilsin mi?`)) return;
+  run("admin_cancel_event", { p_event: id }, "Maç iptal edildi.", loadContent);
+}
+function actArchivePost(id){
+  if (!confirm("Gönderi akıştan kaldırılsın mı?")) return;
+  run("admin_archive_post", { p_post: id }, "Gönderi kaldırıldı.", loadContent);
+}
+function refreshCurrent(){
+  if (!$("p-sikayet").classList.contains("hide")) loadReports();
+  else if (!$("p-kullanici").classList.contains("hide")) loadUsers();
+  else loadStats();
+}
+
+/* ---------- başlat ---------- */
+(async () => {
+  const { data } = await db.auth.getSession();
+  if (data?.session) gate();
+})();
+</script>
+</body>
+</html>
