@@ -112,6 +112,7 @@
     <button id="t-sikayet" onclick="showTab('sikayet')">🚩 Şikâyetler</button>
     <button id="t-kullanici" onclick="showTab('kullanici')">👥 Kullanıcılar</button>
     <button id="t-icerik" onclick="showTab('icerik')">📋 İçerik</button>
+    <button id="t-ayarlar" onclick="showTab('ayarlar')">⚙️ Ayarlar</button>
   </nav>
   <main>
     <section id="p-ozet"></section>
@@ -135,6 +136,27 @@
       <h3 class="sec">🎯 Keşfet gönderileri (son 30)</h3>
       <div id="postList"></div>
     </section>
+    <section id="p-ayarlar" class="hide">
+      <h3 class="sec">👑 Yöneticiler</h3>
+      <div class="toolbar">
+        <input id="newAdminPhone" placeholder="Yeni yönetici telefonu (05xx xxx xx xx)" inputmode="tel">
+        <button class="chipbtn on" onclick="actAddAdmin()">➕ Yönetici ekle</button>
+      </div>
+      <div id="admList"></div>
+      <h3 class="sec">🔑 Giriş kodları (test numaraları)</h3>
+      <div class="item">
+        <div class="meta">Kurucu hesapların sabit giriş kodları Supabase kasasında tutulur ve güvenlik gereği yalnızca oradan değiştirilebilir:
+        Authentication → Sign In / Providers → <b>Phone</b> → <b>Test Phone Numbers</b>. Kendi numaralarınızın kodunu gizli tutun;
+        <b>905550000000=123456</b> satırı Google incelemesi içindir, silmeyin.</div>
+        <div class="row"><a href="https://supabase.com/dashboard/project/rxmngndtwndqbmlljhth/auth/providers" target="_blank"><button class="b-tur">🔐 Kod ayarlarını aç</button></a></div>
+      </div>
+      <h3 class="sec">🔗 Hızlı bağlantılar</h3>
+      <div class="item"><div class="row">
+        <a href="https://play.google.com/console/" target="_blank"><button class="b-gri">▶️ Play Console</button></a>
+        <a href="https://supabase.com/dashboard/project/rxmngndtwndqbmlljhth" target="_blank"><button class="b-gri">🗄 Supabase</button></a>
+        <a href="https://github.com/NuunMedya/eksik-var/tree/main/docs" target="_blank"><button class="b-gri">📁 Site dosyaları</button></a>
+      </div></div>
+    </section>
   </main>
 </div>
 
@@ -155,6 +177,7 @@ function loginErr(m){ const e=$("loginErr"); if(!m){e.classList.add("hide");retu
 
 /* ---------- telefon ---------- */
 let PHONE = "";
+let MYID = "";
 function normPhone(v){
   let d = String(v||"").replace(/\D/g,"");
   if (d.startsWith("0")) d = d.slice(1);
@@ -190,6 +213,7 @@ async function gate(){
   if (error) { $("gateMsg").textContent = "Kontrol başarısız: " + error.message; return; }
   if (!data) { $("gateMsg").textContent = "Bu hesap yönetici değil. Kurucu hesabınla giriş yapmalısın."; return; }
   const { data: s } = await db.auth.getUser();
+  MYID = s?.user?.id || "";
   $("whoami").textContent = s?.user?.phone ? "+" + s.user.phone : "";
   $("v-gate").classList.add("hide"); $("v-app").classList.remove("hide");
   showTab("ozet");
@@ -197,7 +221,7 @@ async function gate(){
 
 /* ---------- sekmeler ---------- */
 function showTab(t){
-  for (const k of ["ozet","sikayet","kullanici","icerik"]) {
+  for (const k of ["ozet","sikayet","kullanici","icerik","ayarlar"]) {
     $("p-"+k).classList.toggle("hide", k!==t);
     $("t-"+k).classList.toggle("on", k===t);
   }
@@ -205,6 +229,7 @@ function showTab(t){
   if (t==="sikayet") loadReports();
   if (t==="kullanici") loadUsers();
   if (t==="icerik") loadContent();
+  if (t==="ayarlar") loadSettings();
 }
 
 /* ---------- ÖZET ---------- */
@@ -352,6 +377,37 @@ function refreshCurrent(){
   if (!$("p-sikayet").classList.contains("hide")) loadReports();
   else if (!$("p-kullanici").classList.contains("hide")) loadUsers();
   else loadStats();
+}
+
+/* ---------- AYARLAR ---------- */
+async function loadSettings(){
+  $("admList").innerHTML = '<div class="empty">Yükleniyor…</div>';
+  const { data, error } = await db.rpc("list_admins");
+  if (error) return $("admList").innerHTML = `<div class="empty">Hata: ${esc(error.message)} — ayarlar-eki.sql çalıştırıldı mı?</div>`;
+  if (!data || !data.length) return $("admList").innerHTML = '<div class="empty">Yönetici bulunamadı.</div>';
+  $("admList").innerHTML = data.map(a => `
+    <div class="item">
+      <h4>👑 ${esc(a.full_name||"?")} <span class="meta">@${esc(a.username||"-")}</span>
+        ${a.user_id===MYID ? '<span class="badge s-aktif">sen</span>' : ""}</h4>
+      <div class="meta">Eklendi: ${fmtD(a.added_at)} · ${esc(a.note||"")}</div>
+      ${a.user_id!==MYID ? `<div class="row"><button class="b-kir" onclick="actRemoveAdmin('${a.user_id}','${esc(a.full_name||"")}')">Yöneticilikten çıkar</button></div>` : ""}
+    </div>`).join("");
+}
+async function actAddAdmin(){
+  const p = $("newAdminPhone").value.trim();
+  if (!p) return toast("Önce telefon numarası yaz.");
+  if (!confirm(`Bu numaranın sahibi yönetici yapılacak: ${p}. Onaylıyor musun?`)) return;
+  const { data, error } = await db.rpc("add_admin_by_phone", { p_phone: p, p_note: "panelden eklendi" });
+  if (error) return toast(error.message.includes("KULLANICI_BULUNAMADI") ? "Bu numarayla kayıtlı kullanıcı yok." : "Hata: " + error.message);
+  $("newAdminPhone").value = "";
+  toast(`✅ ${data} artık yönetici.`); loadSettings();
+}
+function actRemoveAdmin(id, name){
+  if (!confirm(`${name} yöneticilikten çıkarılsın mı?`)) return;
+  db.rpc("remove_admin", { p_user: id }).then(({error}) => {
+    if (error) return toast(error.message.includes("SON_YONETICI") ? "Son yönetici çıkarılamaz." : "Hata: " + error.message);
+    toast("Yönetici çıkarıldı."); loadSettings();
+  });
 }
 
 /* ---------- başlat ---------- */
