@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, Image, Share, StyleSheet, Alert } from "r
 import { Ionicons } from "@expo/vector-icons";
 import { t } from "../i18n";
 import { C, onThemeChange } from "../theme";
-import { Avatar } from "../components";
+import { Avatar, RolRozeti } from "../components";
 import { posLabel, posIcon, timeAgo, APP_LINK, CATEGORIES } from "../data";
 import { VideoView, useVideoPlayer } from "expo-video";
 
@@ -31,7 +31,10 @@ export default function PostCard({ p, onLike, onOpenUser, onDelete, onOffer = nu
           style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
           <Avatar name={p.name} uri={p.avatar} size={42} />
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14.5, fontWeight: "900", color: C.ink }} numberOfLines={1}>{p.name}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Text style={{ fontSize: 14.5, fontWeight: "900", color: C.ink, flexShrink: 1 }} numberOfLines={1}>{p.name}</Text>
+              <RolRozeti user={p} small />
+            </View>
             <Text style={{ fontSize: 11.5, color: C.faint }} numberOfLines={1}>
               {p.listing && (p.listing.district || p.listing.city) ? "\u{1F4CD} " + [p.listing.district, p.listing.city].filter(Boolean).join(", ") + "  \u00B7  " : ""}{timeAgo(p.createdAt)}
             </Text>

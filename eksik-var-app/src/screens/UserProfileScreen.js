@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Sty
 import { Ionicons } from "@expo/vector-icons";
 import { t } from "../i18n";
 import { C, onThemeChange } from "../theme";
-import { Avatar, Stars, BACK_ICON } from "../components";
+import { Avatar, Stars, BACK_ICON, RolRozeti } from "../components";
 import { posLabel, relInfo, relColor, CATEGORIES, timeAgo } from "../data";
 import { earnedBadges } from "../badges";
 
@@ -31,6 +31,7 @@ export default function UserProfileScreen({ user, comments = [], rules, blocked 
         )}
         <Avatar name={user.name} uri={user.avatar} size={88} />
         <Text style={st.name}>{user.name}</Text>
+        <RolRozeti user={user} light style={{ alignSelf: "center", marginTop: 4, marginBottom: 2 }} />
         <Text style={{ color: C.mist, fontSize: 13 }}>
           @{user.username}{user.city ? ` · ${user.district ? user.district + ", " : ""}${user.city}` : ""}{user.level && user.level !== "Farketmez" ? ` · ${user.level}` : ""}
         </Text>

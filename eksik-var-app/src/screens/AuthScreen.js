@@ -10,6 +10,7 @@ import { ILLER, ilceleri } from "../trIlIlce";
 import { normalizePhone, CATEGORIES, POSITIONS } from "../data";
 import { PickerRow, PickerSheet, AvatarPicker } from "../components";
 import { chooseAvatar } from "../avatar";
+import { ROLLER, ROL_SIRASI } from "../roller";
 
 /* ───────────────────────────────────────────────────────────────
    Akış (SMS'siz):
@@ -20,33 +21,6 @@ import { chooseAvatar } from "../avatar";
    ─────────────────────────────────────────────────────────────── */
 
 const SITE = "https://eksikvarapp.com";
-const ROLLER = {
-  isletme: {
-    baslik: "İşletme sahibi olarak kaydol", soru: "İşletme sahibi misiniz?", icon: "business",
-    renk: "#4F6BF5", zemin: "#EEF2FF", cizgi: "#C7D2FE",
-    alt: "Kaydından sonra tesis bilgilerini ekleyeceğiz; onay sonrası sahan haritada görünür ve rezervasyon alırsın.",
-    bilgi: "Halı saha, spor salonu ya da kort işletiyorsan bu hesap türü sana göre. Sahalarını listeler, boş saatlerini duyurur, oyunculardan rezervasyon alırsın.",
-  },
-  organizator: {
-    baslik: "Organizatör olarak kaydol", soru: "Organizatör müsünüz?", icon: "trophy",
-    renk: "#F0A32B", zemin: "#FFF7E6", cizgi: "#FDE3B0",
-    alt: "Kaydından sonra kısa bir kurulum var; onay sonrası etkinliklerin öne çıkar ve kadro toplaman kolaylaşır.",
-    bilgi: "Düzenli maç, lig ya da turnuva düzenliyorsan bu hesap türü sana göre. Etkinlik açar, kadro toplar, hakem ve medya ekibi görevlendirirsin.",
-  },
-  hakem: {
-    baslik: "Hakem olarak kaydol", soru: "Hakemim", icon: "megaphone",
-    renk: "#7C5CF2", zemin: "#F1EEFF", cizgi: "#D9D2FA",
-    alt: "Kaydından sonra kısa bir kurulum var; onay sonrası organizatörler seni bulup görevlendirebilir.",
-    bilgi: "Maçlarda hakemlik yapıyorsan bu hesap türü sana göre. Müsait olduğun günleri belirtirsin, organizatörler seni bulup maçlarına davet eder.",
-  },
-  medya: {
-    baslik: "Medya ekibi olarak kaydol", soru: "Medya ekibindenim", icon: "videocam",
-    renk: "#E05A8A", zemin: "#FDEEF4", cizgi: "#F7C5D9",
-    alt: "Kaydından sonra kısa bir kurulum var; onay sonrası organizatörler seni çekim için görevlendirebilir.",
-    bilgi: "Maç çekimi, fotoğraf ya da içerik üretiyorsan bu hesap türü sana göre. Organizatörler seni etkinliklerine kameraman veya fotoğrafçı olarak atar.",
-  },
-};
-const ROL_SIRASI = ["isletme", "organizator", "hakem", "medya"];
 
 /* Ad soyaddan kullanıcı adı üret (rol kayıtlarında sorulmaz; çakışırsa sunucu tetikleyicisi ek düzeltir) */
 const kullaniciAdiUret = (ad, e164) => {
