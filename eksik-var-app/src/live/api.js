@@ -174,6 +174,38 @@ export async function verifyOtp(phone, token) {
   return data.session;
 }
 
+/* ---------- kimlik: telefon + şifre (SMS'siz, güncel akış) ---------- */
+// Kayıt: profil bilgileri metadata ile gider, satırı mevcut profil trigger'ı açar;
+// hesap türü ve e-posta hemen ardından users tablosuna yazılır.
+export async function signUpPhone({ phone, password, name, username, city, district, favCats, positions, accountType, email }) {
+  const cityId = PLAKA[city] || null;
+  let districtId = null;
+  if (district && cityId) {
+    const { data: d } = await supabase.from("districts").select("id").eq("city_id", cityId).eq("name", district).maybeSingle();
+    districtId = d ? d.id : null;
+  }
+  const { data, error } = await supabase.auth.signUp({
+    phone, password,
+    options: {
+      data: { full_name: name, username, city_id: cityId ? String(cityId) : "", district_id: districtId ? String(districtId) : "", phone, fav_cats: favCats || [], positions: positions || [] },
+    },
+  });
+  if (error) throw error;
+  const uid = data.user && data.user.id;
+  if (uid) {
+    const ek = {};
+    if (accountType && accountType !== "oyuncu") ek.hesap_turu = accountType;
+    if (email) ek.email = email;
+    if (Object.keys(ek).length) { try { await supabase.from("users").update(ek).eq("id", uid); } catch { /* sessiz */ } }
+  }
+  return data.session;
+}
+export async function signInPhone({ phone, password }) {
+  const { data, error } = await supabase.auth.signInWithPassword({ phone, password });
+  if (error) throw error;
+  return data.session;
+}
+
 /* ---------- kimlik (e-posta; yedek) ---------- */
 export async function signUp({ email, pass, name, username, phone, city, district }) {
   const cityId = PLAKA[city] || null;

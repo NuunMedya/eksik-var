@@ -875,17 +875,21 @@ export default function DemoApp() {
   if (!user && !onboarded) return <OnboardingScreen onDone={() => setOnboarded(true)} />;
   if (!user)
     return (
-      <View style={{ flex: 1, backgroundColor: C.turf }}>
-        <StatusBar style="light" />
+      <View style={{ flex: 1, backgroundColor: C.chalk }}>
+        <StatusBar style={C.isDark ? "light" : "dark"} />
         <SafeAreaView style={{ flex: 1 }}>
           <AuthScreen
-            demoHint="Demo modu: SMS gelmez, kod 123456"
+            demoHint="Demo modu: SMS yok, bilgilerinle doğrudan girersin"
             error={authError}
-            onSendCode={async () => { setAuthError(null); showToast(t("Demo: SMS kodu 123456")); return true; }}
-            onVerify={async (code, u) => {
-              if (code !== "123456") { setAuthError("Kod hatalı. Demo kodu: 123456"); return; }
+            onLogin={async (u) => {
               setAuthError(null);
-              setUser({ ...u, name: u.name || "Emre Kaya", username: u.username || "emre_k", verified: true, positions: ["kaleci", "defans"], teamName: "Keçiören Kartalları", mvpCount: 1, paymentStats: { paid: 12, late: 1, overdue: 0, pct: 92 },
+              setUser({ ...u, name: "Emre Kaya", username: "emre_k", verified: true, positions: ["kaleci", "defans"], teamName: "Keçiören Kartalları", mvpCount: 1, paymentStats: { paid: 12, late: 1, overdue: 0, pct: 92 },
+                        totals: { goals: 14, assists: 6, matches: 23 }, savedVenues: [{ name: "Arena Spor Tesisleri", district: "Keçiören", price: 120, used: 5 }, { name: "Yıldız Halı Saha", district: "Çankaya", price: 150, used: 2 }],
+                        rating: 4.6, count: 12, rel: 92, joined: 23, noShow: 2, organized: 5, founder: true, streak: 7 });
+            }}
+            onRegister={async (u) => {
+              setAuthError(null);
+              setUser({ ...u, name: u.name || "Emre Kaya", username: u.username || "emre_k", verified: true, positions: u.positions && u.positions.length ? u.positions : ["kaleci", "defans"], teamName: "Keçiören Kartalları", mvpCount: 1, paymentStats: { paid: 12, late: 1, overdue: 0, pct: 92 },
                         totals: { goals: 14, assists: 6, matches: 23 }, savedVenues: [{ name: "Arena Spor Tesisleri", district: "Keçiören", price: 120, used: 5 }, { name: "Yıldız Halı Saha", district: "Çankaya", price: 150, used: 2 }],
                         rating: 4.6, count: 12, rel: 92, joined: 23, noShow: 2, organized: 5, founder: true, streak: 7 });
             }}
