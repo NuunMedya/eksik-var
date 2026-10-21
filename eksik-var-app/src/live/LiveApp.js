@@ -501,18 +501,18 @@ export default function LiveApp() {
     setPushTap(null);
   }, [pushTap, meId, chats, events]);  
 
-  /* ---------- kimlik ---------- */
-  const handleSendCode = async (f) => {
+  /* ---------- kimlik (telefon + şifre, SMS'siz) ---------- */
+  const handleLogin = async ({ phone, password }) => {
     setAuthError(null); setAuthBusy(true);
-    try { await api.sendOtp(f); return true; }
-    catch (e) { setAuthError(friendly(e)); return false; }
+    try { await api.signInPhone({ phone, password }); }
+    catch (e) { setAuthError(friendly(e)); }
     finally { setAuthBusy(false); }
   };
-  const handleVerify = async (code, f) => {
+  const handleRegister = async (f) => {
     setAuthError(null); setAuthBusy(true);
     try {
-      const s = await api.verifyOtp(f.phone, code);
-      if (s && f.mode === "register" && f.avatar) { try { await api.uploadAvatar(s.user.id, f.avatar); } catch { /* sessiz */ } }
+      const s = await api.signUpPhone(f);
+      if (s && f.avatar) { try { await api.uploadAvatar(s.user.id, f.avatar); } catch { /* sessiz */ } }
     } catch (e) { setAuthError(friendly(e)); }
     finally { setAuthBusy(false); }
   };
@@ -874,10 +874,10 @@ export default function LiveApp() {
   if (!session && onboarded === false) return <OnboardingScreen onDone={finishOnboarding} />;
   if (!session)
     return (
-      <View style={{ flex: 1, backgroundColor: C.turf }}>
-        <StatusBar style="light" />
+      <View style={{ flex: 1, backgroundColor: C.chalk }}>
+        <StatusBar style={C.isDark ? "light" : "dark"} />
         <SafeAreaView style={{ flex: 1 }}>
-          <AuthScreen onSendCode={handleSendCode} onVerify={handleVerify} busy={authBusy} error={authError} />
+          <AuthScreen onLogin={handleLogin} onRegister={handleRegister} busy={authBusy} error={authError} />
         </SafeAreaView>
       </View>
     );

@@ -4,8 +4,26 @@ import { Ionicons } from "@expo/vector-icons";
 import { t } from "./i18n";
 import { C, onThemeChange } from "./theme";
 import { initials, avatarBg } from "./data";
+import { rolBilgi } from "./roller";
 
 /* ---------- Avatar ---------- */
+/* Hesap türü rozeti: işletme / organizatör / hakem / medya. Oyuncuda hiçbir şey çizmez.
+   light: koyu zemin (profil başlığı) · small: ilan kartı kimlik satırı */
+export function RolRozeti({ user, light = false, small = false, style }) {
+  const r = rolBilgi(user);
+  if (!r) return null;
+  const bg = light ? "rgba(255,255,255,0.18)" : r.zemin;
+  const fg = light ? "#fff" : r.renk;
+  return (
+    <View style={[{ flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", backgroundColor: bg, borderRadius: 999,
+      paddingHorizontal: small ? 7 : 10, paddingVertical: small ? 2 : 4, opacity: r.bekliyor ? 0.75 : 1 }, style]}>
+      <Ionicons name={r.icon} size={small ? 10 : 12} color={fg} />
+      <Text style={{ fontSize: small ? 10 : 11.5, fontWeight: "800", color: fg }}>{small ? r.etiket : r.metin}</Text>
+      {r.onayli ? <Ionicons name="checkmark-circle" size={small ? 10 : 12} color={fg} /> : null}
+    </View>
+  );
+}
+
 export function Avatar({ name, uri, size = 40 }) {
   if (uri) {
     return (

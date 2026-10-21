@@ -22,7 +22,7 @@ export const fmtTime = (iso) => {
   return `${d.getDate()}.${pad(d.getMonth() + 1)}`;
 };
 
-const USER_COLS = "id, full_name, username, bio, skill_level, avatar_url, rating_avg, rating_count, reliability_pct, events_joined, events_organized, no_show_count, city_id, district_id, positions, fav_cat, fav_cats, cat_levels, team_name, mvp_count, is_verified, status, status_reason, suspended_until, contact_mode, contact_scope, quiet_enabled, quiet_start, quiet_end, notif_basvuru, notif_mesaj, notif_hatirlatma, notif_yakin, cities(name), districts(name)";
+const USER_COLS = "id, full_name, username, bio, skill_level, avatar_url, rating_avg, rating_count, reliability_pct, events_joined, events_organized, no_show_count, city_id, district_id, positions, fav_cat, fav_cats, cat_levels, team_name, mvp_count, is_verified, status, status_reason, suspended_until, contact_mode, contact_scope, quiet_enabled, quiet_start, quiet_end, notif_basvuru, notif_mesaj, notif_hatirlatma, notif_yakin, hesap_turu, hesap_onay, cities(name), districts(name)";
 
 export function mapUser(u) {
   if (!u) return null;
@@ -33,6 +33,7 @@ export function mapUser(u) {
     joined: u.events_joined || 0, organized: u.events_organized || 0, noShow: u.no_show_count || 0,
     city: u.cities ? u.cities.name : null, district: u.districts ? u.districts.name : null,
     cityId: u.city_id, districtId: u.district_id,
+    role: u.hesap_turu || "oyuncu", roleStatus: u.hesap_onay || "yok",
     verified: !!u.is_verified, status: u.status || "aktif", statusReason: u.status_reason || null, suspendedUntil: u.suspended_until || null,
     positions: u.positions || [], favCat: u.fav_cat || null, favCats: Array.isArray(u.fav_cats) ? u.fav_cats : [], catLevels: u.cat_levels || {}, teamName: u.team_name || null, mvpCount: u.mvp_count || 0,
     bio: u.bio || "", level: LEVEL_TO_UI[u.skill_level] || "Farketmez",
@@ -170,6 +171,38 @@ export async function sendOtp({ mode, phone, name, username, city, district, fav
 }
 export async function verifyOtp(phone, token) {
   const { data, error } = await supabase.auth.verifyOtp({ phone, token, type: "sms" });
+  if (error) throw error;
+  return data.session;
+}
+
+/* ---------- kimlik: telefon + şifre (SMS'siz, güncel akış) ---------- */
+// Kayıt: profil bilgileri metadata ile gider, satırı mevcut profil trigger'ı açar;
+// hesap türü ve e-posta hemen ardından users tablosuna yazılır.
+export async function signUpPhone({ phone, password, name, username, city, district, favCats, positions, accountType, email }) {
+  const cityId = PLAKA[city] || null;
+  let districtId = null;
+  if (district && cityId) {
+    const { data: d } = await supabase.from("districts").select("id").eq("city_id", cityId).eq("name", district).maybeSingle();
+    districtId = d ? d.id : null;
+  }
+  const { data, error } = await supabase.auth.signUp({
+    phone, password,
+    options: {
+      data: { full_name: name, username, city_id: cityId ? String(cityId) : "", district_id: districtId ? String(districtId) : "", phone, fav_cats: favCats || [], positions: positions || [] },
+    },
+  });
+  if (error) throw error;
+  const uid = data.user && data.user.id;
+  if (uid) {
+    const ek = {};
+    if (accountType && accountType !== "oyuncu") { ek.hesap_turu = accountType; ek.hesap_onay = "bekliyor"; }
+    if (email) ek.email = email;
+    if (Object.keys(ek).length) { try { await supabase.from("users").update(ek).eq("id", uid); } catch { /* sessiz */ } }
+  }
+  return data.session;
+}
+export async function signInPhone({ phone, password }) {
+  const { data, error } = await supabase.auth.signInWithPassword({ phone, password });
   if (error) throw error;
   return data.session;
 }
@@ -508,7 +541,7 @@ export async function userExtras(userId) {
 export async function listPosts(meId, cityName) {
   const cityId = PLAKA[cityName] || null;
   let q = supabase.from("posts")
-    .select("id, user_id, caption, image_url, video_url, attach_listing, created_at, users!posts_user_id_fkey(full_name, avatar_url, districts(name)), post_likes(user_id), post_comments(count)")
+    .select("id, user_id, caption, image_url, video_url, attach_listing, created_at, users!posts_user_id_fkey(full_name, avatar_url, hesap_turu, hesap_onay, districts(name)), post_likes(user_id), post_comments(count)")
     .order("created_at", { ascending: false }).limit(40);
   q = q.eq("archived", false);
   if (cityId) q = q.eq("city_id", cityId);
@@ -530,6 +563,7 @@ export async function listPosts(meId, cityName) {
   return rows.map((r) => ({
     id: r.id, userId: r.user_id === meId ? "me" : r.user_id,
     name: (r.users && r.users.full_name) || "Oyuncu", avatar: (r.users && r.users.avatar_url) || undefined,
+    role: (r.users && r.users.hesap_turu) || "oyuncu", roleStatus: (r.users && r.users.hesap_onay) || "yok",
     caption: r.caption || "", image: r.image_url || null, video: r.video_url || null, createdAt: r.created_at,
     likes: (r.post_likes || []).map((x) => (x.user_id === meId ? "me" : x.user_id)),
     district: (r.users && r.users.districts && r.users.districts.name) || null,

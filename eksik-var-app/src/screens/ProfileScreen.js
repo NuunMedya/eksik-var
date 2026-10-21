@@ -5,7 +5,7 @@ import { t } from "../i18n";
 import { C, onThemeChange } from "../theme";
 import { MODE_LABEL, DEFAULT_SETTINGS } from "../data";
 import { badgesFor } from "../badges";
-import { AvatarPicker } from "../components";
+import { AvatarPicker, RolRozeti } from "../components";
 import { chooseAvatar } from "../avatar";
 
 export default function ProfileScreen({ user, pendingRate, onRate, onLogout, onSettings, onInvite, onAvatar, settings = DEFAULT_SETTINGS, events = [], team = null, onTeam = () => {}, marketMine = null, onMarket = () => {}, onOpenEvent = () => {}, onPositionsChange = () => {}, onEdit = () => {}, onBringTeam = () => {} }) {
@@ -19,6 +19,7 @@ export default function ProfileScreen({ user, pendingRate, onRate, onLogout, onS
           <Text style={{ color: C.mist, fontSize: 11, marginBottom: 4 }}>{t("Fotoğraf eklemek için dokun")}</Text>
         )}
         <Text style={{ color: "#fff", fontWeight: "900", fontSize: 19 }}>{user.name}</Text>
+        <RolRozeti user={user} light style={{ alignSelf: "center", marginTop: 4, marginBottom: 2 }} />
         <Text style={{ color: C.mist, fontSize: 13 }}>
           @{user.username} · {user.district ? `${user.district}, ` : ""}{user.city}{user.level && user.level !== "Farketmez" ? ` · ${user.level}` : ""}
         </Text>
