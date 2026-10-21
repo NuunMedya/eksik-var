@@ -127,6 +127,7 @@
       <div class="toolbar">
         <input id="uq" placeholder="İsim veya @kullanıcı adı ara…" onkeydown="if(event.key==='Enter')loadUsers()">
         <button class="chipbtn on" onclick="loadUsers()">Ara</button>
+        <button class="chipbtn" id="onayBtn" onclick="toggleOnay()">⏳ Onay bekleyenler</button>
       </div>
       <div id="userList"></div>
     </section>
@@ -171,6 +172,10 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmtD = (d) => d ? new Date(d).toLocaleString("tr-TR", {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}) : "—";
 const badge = (s) => `<span class="badge s-${esc(s)}">${esc(s)}</span>`;
+const ROL = { isletme:["İşletme","#4F6BF5","#EEF2FF"], organizator:["Organizatör","#F0A32B","#FFF7E6"], hakem:["Hakem","#7C5CF2","#F1EEFF"], medya:["Medya","#E05A8A","#FDEEF4"] };
+const rolBadge = (u) => { const r = ROL[u.hesap_turu]; if (!r) return "";
+  const d = u.hesap_onay === "onayli" ? " ✓" : u.hesap_onay === "red" ? " · reddedildi" : " · onay bekliyor";
+  return `<span class="badge" style="background:${r[2]};color:${r[1]}">${r[0]}${d}</span>`; };
 let toastT; function toast(m){ const t=$("toast"); t.textContent=m; t.classList.add("show");
   clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2600); }
 function loginErr(m){ const e=$("loginErr"); if(!m){e.classList.add("hide");return;} e.textContent=m; e.classList.remove("hide"); }
@@ -244,6 +249,7 @@ async function loadStats(){
     ${card(k.events_open, "Açık maç ilanı")} ${card(k.events_week, "Son 7 günde maç")}
     ${card(k.reports_pending, "Bekleyen şikâyet", true)} ${card(k.disputes_pending, "Yoklama itirazı", true)}
     ${card(k.suspended, "Askıda hesap", true)} ${card(k.banned, "Banlı hesap")}
+    ${card(k.onay_bekleyen, "Onay bekleyen hesap", true)}
   </div>`;
 }
 
@@ -283,15 +289,21 @@ async function loadReports(){
 async function loadUsers(){
   $("userList").innerHTML = '<div class="empty">Yükleniyor…</div>';
   const t = $("uq").value.trim().replace(/[%_,]/g,"");
-  let q = db.from("users").select("id, full_name, username, status, status_reason, suspended_until, created_at, rating_avg, rating_count, reliability_pct, no_show_count")
+  let q = db.from("users").select("id, full_name, username, status, status_reason, suspended_until, created_at, rating_avg, rating_count, reliability_pct, no_show_count, hesap_turu, hesap_onay, email")
             .order("created_at", { ascending:false }).limit(30);
   if (t) q = q.or(`full_name.ilike.%${t}%,username.ilike.%${t}%`);
+  if (onlyOnay) q = q.eq("hesap_onay", "bekliyor");
   const { data, error } = await q;
   if (error) return $("userList").innerHTML = `<div class="empty">Hata: ${esc(error.message)}</div>`;
   if (!data.length) return $("userList").innerHTML = '<div class="empty">Sonuç yok.</div>';
   $("userList").innerHTML = data.map(u => `
     <div class="item">
-      <h4>${esc(u.full_name||"?")} <span class="meta">@${esc(u.username||"-")}</span> ${badge(u.status)}</h4>
+      <h4>${esc(u.full_name||"?")} <span class="meta">@${esc(u.username||"-")}</span> ${rolBadge(u)} ${badge(u.status)}</h4>
+      ${u.email ? `<div class="meta">✉️ ${esc(u.email)}</div>` : ""}
+      ${u.hesap_onay === "bekliyor" ? `<div class="row">
+        <button class="b-tur" onclick="actOnay('${u.id}','${esc(u.full_name||"")}','onayli')">✅ ${esc((ROL[u.hesap_turu]||["Hesap"])[0])} olarak onayla</button>
+        <button class="b-kir" onclick="actOnay('${u.id}','${esc(u.full_name||"")}','red')">✖ Reddet</button>
+      </div>` : ""}
       <div class="meta">katılım ${fmtD(u.created_at)}
         · ⭐ ${u.rating_avg ?? "—"} (${u.rating_count||0}) · güvenilirlik %${u.reliability_pct ?? "—"} · gelmedi: ${u.no_show_count||0}</div>
       ${u.status!=="aktif" ? `<div class="meta">Sebep: ${esc(u.status_reason||"—")}${u.suspended_until ? " · bitiş: "+fmtD(u.suspended_until) : ""}</div>` : ""}
@@ -331,6 +343,14 @@ async function loadContent(){
       ${p.image_url ? `<div class="meta">🖼 görsel içeriyor</div>` : ""}
       ${!p.archived ? `<div class="row"><button class="b-kir" onclick="actArchivePost('${p.id}')">🗄 Gönderiyi kaldır</button></div>` : ""}
     </div>`).join("");
+}
+
+let onlyOnay = false;
+function toggleOnay(){ onlyOnay = !onlyOnay; $("onayBtn").classList.toggle("on", onlyOnay); loadUsers(); }
+function actOnay(id, name, karar){
+  const msg = karar === "onayli" ? `✅ ${name} hesabı onaylanacak; profilinde onaylı rozet görünecek.` : `✖ ${name} hesap türü talebi reddedilecek; kullanıcı oyuncu olarak devam eder.`;
+  if (!confirm(msg)) return;
+  run("set_hesap_onay", { p_user: id, p_karar: karar }, karar === "onayli" ? "Onaylandı." : "Reddedildi.", refreshCurrent);
 }
 
 /* ---------- eylemler ---------- */
