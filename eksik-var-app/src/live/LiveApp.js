@@ -887,7 +887,9 @@ export default function LiveApp() {
   useEffect(() => { if (meId) api.listSponsors().then((x) => { if (x.length) setSponsors(x); }).catch(() => { /* tablo yoksa varsayılan */ }); }, [meId]);
   useEffect(() => {
     if (!meId || !me) return;
-    api.listLeagues(me.cityId || null).then((ls) => { setLeagues(ls); if (ls.length) api.leagueSeen(ls.map((l) => l.id)).catch(() => {}); }).catch(() => setLeagues([]));
+    api.listLeagues(me.cityId || null)
+      .then((ls) => { setLeagues(ls); if (ls.length) api.leagueSeen(ls.map((l) => l.id)).catch(() => {}); })
+      .catch(() => { /* tablo yoksa ya da ağ hatası: mevcut listeyi koru */ });
   }, [meId, me && me.cityId]);
   const ligBasvur = (lig) => {
     const gonder = async (tur) => {

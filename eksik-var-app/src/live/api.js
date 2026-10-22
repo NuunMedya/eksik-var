@@ -708,8 +708,8 @@ export async function listLeagues(cityId) {
     baslangic: l.baslangic, takimUcreti: l.takim_ucreti || null, kontenjan: l.kontenjan, tel: l.iletisim_tel || null, link: l.link || null,
   }));
 }
-export const leagueSeen = (ids) => supabase.rpc("lig_goster", { p_ids: ids });
-export const leagueClick = (id) => supabase.rpc("lig_tikla", { p_id: id });
+export async function leagueSeen(ids) { const { error } = await supabase.rpc("lig_goster", { p_ids: ids }); if (error) throw error; }
+export async function leagueClick(id) { const { error } = await supabase.rpc("lig_tikla", { p_id: id }); if (error) throw error; }
 export async function leagueApply(id, { tur, takim, not: notu }) {
   const { error } = await supabase.rpc("lig_basvur", { p_id: id, p_tur: tur, p_takim: takim || null, p_not: notu || null });
   if (error) throw error;
