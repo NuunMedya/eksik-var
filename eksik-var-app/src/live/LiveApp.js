@@ -518,6 +518,7 @@ export default function LiveApp() {
     try {
       const s = await api.signUpPhone(f);
       if (s && f.avatar) { try { await api.uploadAvatar(s.user.id, f.avatar); } catch { /* sessiz */ } }
+      if (s && f.email) showToast(t("E-postana doğrulama kodu gönderdik — Ayarlar → Kurtarma e-postası'ndan doğrula"));
     } catch (e) { setAuthError(friendly(e)); }
     finally { setAuthBusy(false); }
   };
@@ -533,10 +534,12 @@ export default function LiveApp() {
     catch (e) { setAuthError(friendly(e)); }
     finally { setAuthBusy(false); }
   };
-  const [authEmail, setAuthEmail] = useState(null);
-  useEffect(() => { if (session) api.authEmail().then(setAuthEmail).catch(() => {}); else setAuthEmail(null); }, [session]);
+  const [emailState, setEmailState] = useState({ email: null, pending: null });
+  const refreshEmail = () => api.authEmailState().then(setEmailState).catch(() => {});
+  useEffect(() => { if (session) refreshEmail(); else setEmailState({ email: null, pending: null }); }, [session]);
   const changePassword = ({ current, next }) => api.changePassword({ phone: session && session.user && session.user.phone ? "+" + String(session.user.phone).replace(/^\+/, "") : "", current, next });
-  const changeEmail = async (email) => { const m = await api.changeEmail(meId, email); setAuthEmail(m); };
+  const changeEmail = async (email) => { await api.changeEmail(meId, email); await refreshEmail(); };
+  const verifyEmail = async (email, code) => { await api.verifyEmailCode(meId, email, code); await refreshEmail(); };
   const logout = async () => { await api.signOut(); setView({ name: "root" }); setTab("home"); };
 
   /* ---------- yardımcılar ---------- */
@@ -1080,7 +1083,7 @@ export default function LiveApp() {
             <View style={StyleSheet.absoluteFill}>
               <SettingsScreen settings={settings} onChange={changeSettings} onBack={() => setView({ name: "root" })} onDeleteAccount={deleteAccount}
                 blockedCount={blocked.length} onBlocked={() => setView({ name: "blocked" })} paymentDetails={paymentDetails} onSaveIban={saveIban} onTheme={saveTheme} onLang={saveLang}
-                authEmail={authEmail} onChangePassword={changePassword} onChangeEmail={changeEmail} />
+                authEmail={emailState.email} pendingEmail={emailState.pending} onChangePassword={changePassword} onChangeEmail={changeEmail} onVerifyEmail={verifyEmail} />
             </View>
           )}
           {rateEvent && (

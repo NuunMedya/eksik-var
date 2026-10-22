@@ -249,14 +249,28 @@ export async function changePassword({ phone, current, next }) {
   const { error: e2 } = await supabase.auth.updateUser({ password: next });
   if (e2) throw e2;
 }
-// İçerideki kullanıcı: kurtarma e-postasını ekler / değiştirir (users.email ile birlikte)
+// İçerideki kullanıcı: kurtarma e-postası ister → adrese 6 haneli doğrulama kodu gider ("Change email address" şablonu {{ .Token }} içermeli)
 export async function changeEmail(uid, email) {
   const temiz = (email || "").trim().toLowerCase() || null;
-  if (temiz) { const { error } = await supabase.auth.updateUser({ email: temiz }); if (error) throw error; }
+  if (!temiz) { await supabase.from("users").update({ email: null }).eq("id", uid); return null; }
+  const { error } = await supabase.auth.updateUser({ email: temiz });
+  if (error) throw error;
+  return temiz; // doğrulanana kadar "bekliyor"
+}
+// Gelen kodla e-posta doğrulanır; ancak o zaman users.email yazılır ve şifre sıfırlamada kullanılabilir
+export async function verifyEmailCode(uid, email, code) {
+  const temiz = (email || "").trim().toLowerCase();
+  const { error } = await supabase.auth.verifyOtp({ email: temiz, token: code.trim(), type: "email_change" });
+  if (error) throw error;
   await supabase.from("users").update({ email: temiz }).eq("id", uid);
   return temiz;
 }
-export const authEmail = async () => { const { data } = await supabase.auth.getUser(); return (data && data.user && data.user.email) || null; };
+// { email: doğrulanmış adres | null, pending: doğrulama bekleyen adres | null }
+export async function authEmailState() {
+  const { data } = await supabase.auth.getUser();
+  const u = data && data.user;
+  return { email: (u && u.email) || null, pending: (u && u.new_email) || null };
+}
 export const signOut = () => supabase.auth.signOut();
 export const getSession = async () => (await supabase.auth.getSession()).data.session;
 export const onAuthChange = (cb) => supabase.auth.onAuthStateChange((_e, session) => cb(session));

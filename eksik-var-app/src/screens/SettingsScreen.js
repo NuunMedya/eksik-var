@@ -60,11 +60,21 @@ function Row({ icon, title, desc, value, onChange }) {
   );
 }
 
-function GuvenlikBolumu({ authEmail, onChangePassword, onChangeEmail }) {
+function GuvenlikBolumu({ authEmail, pendingEmail, onChangePassword, onChangeEmail, onVerifyEmail }) {
   const [acik, setAcik] = React.useState(null); // "sifre" | "eposta" | null
   const [mevcut, setMevcut] = React.useState(""); const [yeni, setYeni] = React.useState(""); const [yeni2, setYeni2] = React.useState("");
   const [mail, setMail] = React.useState(authEmail || ""); const [mesaj, setMesaj] = React.useState(null); const [busy, setBusy] = React.useState(false);
+  const [kod, setKod] = React.useState(""); const [bekleyen, setBekleyen] = React.useState(pendingEmail || null);
   React.useEffect(() => { setMail(authEmail || ""); }, [authEmail]);
+  React.useEffect(() => { setBekleyen(pendingEmail || null); }, [pendingEmail]);
+  const kodDogrula = async () => {
+    setMesaj(null);
+    if (kod.trim().length < 6) return setMesaj({ hata: true, m: "E-postana gelen 6 haneli kodu gir" });
+    setBusy(true);
+    try { await onVerifyEmail(bekleyen, kod); setKod(""); setBekleyen(null); setMesaj({ m: "E-posta doğrulandı ✓ Artık şifreni bununla sıfırlayabilirsin" }); setAcik(null); }
+    catch { setMesaj({ hata: true, m: "Kod hatalı ya da süresi dolmuş" }); }
+    finally { setBusy(false); }
+  };
   const gizliKutu = (ph, v, set) => (
     <TextInput placeholder={ph} placeholderTextColor={C.placeholder} secureTextEntry autoCapitalize="none" value={v} onChangeText={set} style={st.input} />
   );
@@ -83,7 +93,7 @@ function GuvenlikBolumu({ authEmail, onChangePassword, onChangeEmail }) {
     const m = mail.trim();
     if (m && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m)) return setMesaj({ hata: true, m: "Geçerli bir e-posta adresi gir" });
     setBusy(true);
-    try { await onChangeEmail(m); setMesaj({ m: m ? "E-posta kaydedildi ✓" : "E-posta kaldırıldı" }); setAcik(null); }
+    try { await onChangeEmail(m); if (m) { setBekleyen(m); setKod(""); setMesaj({ m: `${m} adresine 6 haneli doğrulama kodu gönderdik` }); } else { setMesaj({ m: "E-posta kaldırıldı" }); setAcik(null); } }
     catch { setMesaj({ hata: true, m: "E-posta kaydedilemedi, tekrar dene" }); }
     finally { setBusy(false); }
   };
@@ -111,14 +121,30 @@ function GuvenlikBolumu({ authEmail, onChangePassword, onChangeEmail }) {
           <Ionicons name="mail-outline" size={18} color={C.turfText} style={{ width: 26 }} />
           <View style={{ flex: 1 }}>
             <Text style={{ fontWeight: "700", fontSize: 14, color: C.ink }}>{t("Kurtarma e-postası")}</Text>
-            <Text style={{ fontSize: 12, color: authEmail ? C.faint : C.kit, marginTop: 1 }}>{authEmail || t("Ekli değil — şifreni unutursan sıfırlayamazsın")}</Text>
+            <Text style={{ fontSize: 12, color: authEmail ? C.faint : C.kit, marginTop: 1 }}>
+              {bekleyen ? `${bekleyen} · doğrulama bekliyor` : authEmail ? `${authEmail} · doğrulandı ✓` : t("Ekli değil — şifreni unutursan sıfırlayamazsın")}
+            </Text>
           </View>
           <Ionicons name={acik === "eposta" ? "chevron-up" : "chevron-forward"} size={16} color={C.faint} />
         </TouchableOpacity>
         {acik === "eposta" && (
           <View style={{ paddingHorizontal: 14, paddingBottom: 14, gap: 8 }}>
-            <TextInput placeholder="ornek@mail.com" placeholderTextColor={C.placeholder} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} value={mail} onChangeText={setMail} style={st.input} />
-            <TouchableOpacity onPress={mailKaydet} disabled={busy} style={[st.btn, busy && { opacity: 0.6 }]}><Text style={st.btnText}>{busy ? "Kaydediliyor…" : "E-postayı kaydet"}</Text></TouchableOpacity>
+            {bekleyen ? (
+              <>
+                <Text style={{ fontSize: 12, color: C.faint }}>{bekleyen} adresine gelen kodu gir (spam klasörünü de kontrol et):</Text>
+                <TextInput placeholder="••••••" placeholderTextColor={C.placeholder} keyboardType="number-pad" textContentType="oneTimeCode" value={kod} onChangeText={(v) => setKod(v.replace(/\D/g, "").slice(0, 6))} style={[st.input, { textAlign: "center", letterSpacing: 8, fontSize: 18, fontWeight: "700" }]} />
+                <TouchableOpacity onPress={kodDogrula} disabled={busy} style={[st.btn, busy && { opacity: 0.6 }]}><Text style={st.btnText}>{busy ? "Doğrulanıyor…" : "Doğrula"}</Text></TouchableOpacity>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <TouchableOpacity onPress={() => { setMail(bekleyen); mailKaydet(); }} disabled={busy}><Text style={{ fontSize: 12, fontWeight: "700", color: C.pitch }}>Kodu tekrar gönder</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={() => { setBekleyen(null); setMail(""); }}><Text style={{ fontSize: 12, fontWeight: "700", color: C.faint }}>Adresi değiştir</Text></TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                <TextInput placeholder="ornek@mail.com" placeholderTextColor={C.placeholder} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} value={mail} onChangeText={setMail} style={st.input} />
+                <TouchableOpacity onPress={mailKaydet} disabled={busy} style={[st.btn, busy && { opacity: 0.6 }]}><Text style={st.btnText}>{busy ? "Gönderiliyor…" : "Doğrulama kodu gönder"}</Text></TouchableOpacity>
+              </>
+            )}
           </View>
         )}
         {mesaj ? <Text style={{ paddingHorizontal: 14, paddingBottom: 12, fontSize: 12, fontWeight: "700", color: mesaj.hata ? C.danger : C.pitch }}>{mesaj.m}</Text> : null}
@@ -127,7 +153,7 @@ function GuvenlikBolumu({ authEmail, onChangePassword, onChangeEmail }) {
   );
 }
 
-export default function SettingsScreen({ settings, onChange, onBack, onDeleteAccount, blockedCount = 0, onBlocked, paymentDetails = null, onSaveIban = () => {}, onTheme = () => {}, onLang = () => {}, authEmail = null, onChangePassword = null, onChangeEmail = null }) {
+export default function SettingsScreen({ settings, onChange, onBack, onDeleteAccount, blockedCount = 0, onBlocked, paymentDetails = null, onSaveIban = () => {}, onTheme = () => {}, onLang = () => {}, authEmail = null, pendingEmail = null, onChangePassword = null, onChangeEmail = null, onVerifyEmail = null }) {
   const themeMode = getThemeMode(); const [iban, setIban] = React.useState(paymentDetails ? paymentDetails.iban : "");
   const [holder, setHolder] = React.useState(paymentDetails ? paymentDetails.holder : "");
   const ibanOk = isValidIban(iban);
@@ -272,7 +298,7 @@ export default function SettingsScreen({ settings, onChange, onBack, onDeleteAcc
           {iban.length > 0 && !ibanOk && <Text style={{ fontSize: 11, color: C.kit, marginTop: 6 }}>{t("IBAN \"TR\" ile başlayıp 26 karakter olmalı.")}</Text>}
         </View>
 
-        {onChangePassword ? <GuvenlikBolumu authEmail={authEmail} onChangePassword={onChangePassword} onChangeEmail={onChangeEmail} /> : null}
+        {onChangePassword ? <GuvenlikBolumu authEmail={authEmail} pendingEmail={pendingEmail} onChangePassword={onChangePassword} onChangeEmail={onChangeEmail} onVerifyEmail={onVerifyEmail} /> : null}
 
         <Text style={st.section}>{t("settings.legal")}</Text>
         <View style={st.card}>
