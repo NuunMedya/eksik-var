@@ -776,6 +776,13 @@ export default function LiveApp() {
     catch (e) { fail(e); }
   };
   const dekontAc = (url) => Linking.openURL(url).catch(() => showToast(t("Dekont açılamadı")));
+  const yenidenBol = (eventId) => {
+    const ev = events.find((e) => e.id === eventId);
+    Alert.alert(t("Gelenlere göre yeniden böl"), t("Saha ücreti şu anki katılımcı sayısına bölünür; payı değişenlere bildirim gider."), [
+      { text: t("Vazgeç"), style: "cancel" },
+      { text: t("Böl"), onPress: async () => { try { const yeni = await api.rebalancePrice(eventId); await refreshEvents(); showToast(yeni === (ev && ev.price) ? t("Kişi başı zaten güncel") : t("Kişi başı {p0}₺ oldu · herkese bildirildi", { p0: yeni })); } catch (e) { fail(e); } } },
+    ]);
+  };
   /* --- gol/asist, sezon, yoklama kodu --- */
   const [checkinCodes, setCheckinCodes] = useState({});
   const [seasons, setSeasons] = useState({});
@@ -1046,7 +1053,7 @@ export default function LiveApp() {
                 availability={availabilityFor(activeEvent)} onAskAvailability={askAvailability} onApplySuggested={applySuggested} onAnswer={answerAvailability}
                 onRecordScore={recordScore} myMvpVote={mvpVotes[activeEvent.id] || null}
                 onClaimPayment={claimPayment} onConfirmPayment={confirmPayment} onSendIban={sendIban} onRemindPayments={remindPayments} onCopyIban={copyIbanFor}
-                onPay={(ev) => setOdemeEv(ev)} onOpenProof={dekontAc}
+                onPay={(ev) => setOdemeEv(ev)} onOpenProof={dekontAc} onRebalance={yenidenBol}
                 paymentDetails={paymentDetails} onSaveIban={saveIban}
                 onCalendar={calendarFor} onDirections={directionsFor} onAddGuest={addGuest} onUpdateNeeds={async (id, needs) => { try { await api.updateEventNeeds(id, needs); await refreshEvents(); showToast(t("İhtiyaç güncellendi \u2713")); } catch (e) { fail(e); } }}
                 onStopSeries={async (id) => { try { await api.stopSeries(id); await refreshEvents(); showToast(t("Seri durduruldu — bu hafta son \u23F9")); } catch (e) { fail(e); } }}

@@ -13,7 +13,7 @@ export default function EventDetailScreen({ onPinVenue = null, onUpdateDesc = nu
   onAcceptInvite = () => {}, onDeclineInvite = () => {}, onJoinWaitlist = () => {}, onLeaveWaitlist = () => {},
   availability = null, onAskAvailability = () => {}, onApplySuggested = () => {}, onAnswer = () => {},
   onRecordScore = () => {}, myMvpVote = null,
-  onClaimPayment = () => {}, onConfirmPayment = () => {}, onSendIban = () => {}, onRemindPayments = () => {}, onCopyIban = () => {}, onPay = null, onOpenProof = () => {},
+  onClaimPayment = () => {}, onConfirmPayment = () => {}, onSendIban = () => {}, onRemindPayments = () => {}, onCopyIban = () => {}, onPay = null, onOpenProof = () => {}, onRebalance = null,
   onCalendar = () => {}, onDirections = () => {}, onAddGuest = () => {}, onAddGuests = null, onRemoveGuest = () => {}, onToggleGuest = () => {},
   onCheckIn = () => {}, disputes = [], onFixAttendance = () => {}, onConfirmAllPayments = () => {},
   statRoster = [], onSetStat = () => {}, onShareSummary = () => {}, checkinCode = null, onOpenCode = () => {}, onCheckInWithCode = () => {},
@@ -409,6 +409,39 @@ export default function EventDetailScreen({ onPinVenue = null, onUpdateDesc = nu
                     <Ionicons name="create-outline" size={16} color={C.turfText} />
                   </TouchableOpacity>
                 )}
+                {(() => {
+                  const sm = paymentSummary(payList);
+                  const toplanan = payList.filter((p) => p.status === "odendi").reduce((a, p) => a + Number(p.amount), 0);
+                  const bekleyen = payList.filter((p) => p.status === "bekliyor").length;
+                  const onayBekleyen = payList.filter((p) => p.status === "odedim").length;
+                  const oran = sm.total ? sm.paid / sm.total : 0;
+                  return (
+                    <View style={{ backgroundColor: C.chalk, borderRadius: 14, padding: 12, marginBottom: 10 }}>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" }}>
+                        <View>
+                          <Text style={{ fontSize: 11, fontWeight: "700", color: C.faint, textTransform: "uppercase", letterSpacing: 0.4 }}>{t("Toplanan")}</Text>
+                          <Text style={{ fontSize: 22, fontWeight: "900", color: C.pitch }}>{toplanan}₺</Text>
+                        </View>
+                        <View style={{ alignItems: "flex-end" }}>
+                          <Text style={{ fontSize: 11, fontWeight: "700", color: C.faint, textTransform: "uppercase", letterSpacing: 0.4 }}>{t("Bekleyen")}</Text>
+                          <Text style={{ fontSize: 16, fontWeight: "900", color: sm.pending ? C.kit : C.faint }}>{sm.pending}₺{bekleyen ? ` · ${bekleyen} kişi` : ""}</Text>
+                        </View>
+                      </View>
+                      <View style={{ height: 6, backgroundColor: C.line, borderRadius: 3, marginTop: 10, overflow: "hidden" }}>
+                        <View style={{ width: `${Math.round(oran * 100)}%`, height: 6, backgroundColor: C.pitch }} />
+                      </View>
+                      <Text style={{ fontSize: 11, color: C.faint, marginTop: 6 }}>
+                        {sm.paid}/{sm.total} {t("ödendi")}{onayBekleyen ? ` · ${onayBekleyen} ${t("onay bekliyor")}` : ""}
+                        {ev.totalCost ? ` · ${t("saha")} ${ev.totalCost}₺ ÷ ${Math.max(1, Math.round(ev.totalCost / Math.max(1, ev.price)))} = ${ev.price}₺` : ""}
+                      </Text>
+                      {ev.totalCost && onRebalance ? (
+                        <TouchableOpacity onPress={() => onRebalance(ev.id)} style={{ marginTop: 8, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 }}>
+                          <Ionicons name="calculator-outline" size={13} color={C.turfText} /><Text style={{ fontSize: 11.5, fontWeight: "800", color: C.turfText }}>{t("Gelenlere göre yeniden böl")}</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
+                  );
+                })()}
                 <View style={{ flexDirection: "row", gap: 8, marginBottom: 8 }}>
                   <TouchableOpacity onPress={() => onSendIban(ev.id)} style={[st.btn, st.btnGhost, { flex: 1, paddingVertical: 10, flexDirection: "row", gap: 6 }]}>
                     <Ionicons name="card-outline" size={16} color={C.turfText} /><Text style={[st.btnText, { color: C.turfText }]}>{t("IBAN'ı gruba gönder")}</Text>
@@ -425,7 +458,7 @@ export default function EventDetailScreen({ onPinVenue = null, onUpdateDesc = nu
                 {payList.length === 0 && (
                   <Text style={{ fontSize: 12, color: C.faint }}>{t("Katılımcı geldikçe ödeme listesi burada dolar.")}</Text>
                 )}
-                {payList.map((p) => (
+                {[...payList].sort((a, b) => ({ odedim: 0, bekliyor: 1, odendi: 2, muaf: 3 }[a.status] ?? 9) - ({ odedim: 0, bekliyor: 1, odendi: 2, muaf: 3 }[b.status] ?? 9)).map((p) => (
                   <View key={p.id} style={st.payRow}>
                     <Avatar name={p.name} uri={p.avatar} size={30} />
                     <View style={{ flex: 1, marginLeft: 8 }}>

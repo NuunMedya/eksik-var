@@ -57,7 +57,7 @@ export function mapEvent(e, ctx) {
     id: e.id, title: e.title, cat: e.category_id,
     city: e.city ? e.city.name : "", district: e.district ? e.district.name : null,
     venue: e.venue_name || "", date: fmtEventDate(dateISO, time), dateISO, time, weekday: d.getDay(),
-    price: Number(e.price_per_person || 0), capacity: e.total_capacity, needed: e.needed_count, filled: e.filled_count,
+    price: Number(e.price_per_person || 0), totalCost: e.total_cost != null ? Number(e.total_cost) : null, capacity: e.total_capacity, needed: e.needed_count, filled: e.filled_count,
     level: LEVEL_TO_UI[e.skill_level] || "Farketmez", status: e.status,
     org: mine ? null : org, mine, joined: ctx.joinedIds.has(e.id),
     ended: d < new Date(), recurrence: e.recurrence || "yok", seriesId: e.series_id,
@@ -370,7 +370,7 @@ export async function createEvent(meId, f) {
     organizer_id: meId, category_id: Number(f.cat), city_id: cityId, district_id: d ? d.id : null,
     title: f.title.trim(), description: f.desc || null, venue_name: f.venue.trim(),
     event_date: eventDate.toISOString(), total_capacity: Number(f.capacity), needed_count: Number(f.needed),
-    price_per_person: Number(f.price) || 0, skill_level: LEVEL_TO_DB[f.level] || "farketmez",
+    price_per_person: Number(f.price) || 0, total_cost: f.totalCost ? Number(f.totalCost) : null, skill_level: LEVEL_TO_DB[f.level] || "farketmez",
     recurrence: weekly ? "haftalik" : "yok", recurrence_until: until, needed_positions: f.needs || {},
     kind: f.kind || "oyuncu", team_name: f.teamName || null, format: f.format || null, venue_mode: f.venueMode || null, cost_mode: f.costMode || null,
     offline_regulars: Number(f.offlineRegulars) || 0,
@@ -861,7 +861,7 @@ export async function updateEvent(eventId, f) {
   const { error } = await supabase.from("events").update({
     category_id: Number(f.cat), city_id: cityId, district_id: d ? d.id : null, title: f.title.trim(), description: f.desc || null,
     venue_name: f.venue.trim(), event_date: new Date(`${f.dateISO}T${f.time}:00`).toISOString(),
-    total_capacity: Number(f.capacity), needed_count: Number(f.needed), price_per_person: Number(f.price) || 0,
+    total_capacity: Number(f.capacity), needed_count: Number(f.needed), price_per_person: Number(f.price) || 0, total_cost: f.totalCost ? Number(f.totalCost) : null,
     skill_level: LEVEL_TO_DB[f.level] || "farketmez", needed_positions: f.needs || {},
     team_name: f.teamName || null, format: f.format || null, venue_mode: f.venueMode || null, cost_mode: f.costMode || null,
     offline_regulars: Number(f.offlineRegulars) || 0,
@@ -1001,6 +1001,12 @@ export async function organizerIban(eventId) {
   if (error) throw error;
   const r = Array.isArray(data) ? data[0] : data;
   return r ? { iban: r.iban || null, holder: r.holder || null, organizerName: r.organizer_name || null } : null;
+}
+// Saha ücretini gelen kişi sayısına göre yeniden böl (organizatör) → yeni kişi başı tutar
+export async function rebalancePrice(eventId) {
+  const { data, error } = await supabase.rpc("rebalance_price", { p_event: eventId });
+  if (error) throw error;
+  return Number(data);
 }
 export async function confirmPayment(eventId, userId, status) {
   if (String(userId).startsWith("g:")) { await setGuestRecord(eventId, String(userId).slice(2), { payment_status: status }); return; }

@@ -18,7 +18,7 @@ export default function CreateScreen({ user, onBack, onCreate, initial = null, p
     title: initial.title, cat: initial.cat, city: initial.city, district: initial.district || "", venue: initial.venue,
     dateISO: initial.dateISO || days[0].iso, weekday: initial.weekday != null ? initial.weekday : days[0].weekday, time: initial.time || "21:00",
     recurrence: initial.recurrence || "yok", weeks: 8, needs: initial.needs || {},
-    capacity: String(initial.capacity), needed: String(initial.needed), price: String(initial.price), level: initial.level, desc: initial.desc || "",
+    capacity: String(initial.capacity), needed: String(initial.needed), price: String(initial.price), totalCost: initial.totalCost ? String(initial.totalCost) : "", level: initial.level, desc: initial.desc || "",
     kind: initial.kind || "oyuncu", teamName: initial.teamName || user.teamName || "", format: initial.format || inferFormat(initial.cat, initial.capacity), offlineRegulars: String(initial.offlineRegulars || 0),
     venueMode: initial.venueMode || "bizde", costMode: initial.costMode || "yari_yariya",
     venueLat: initial.venueLat ?? null, venueLng: initial.venueLng ?? null, venueId: initial.venueId || null,
@@ -26,7 +26,7 @@ export default function CreateScreen({ user, onBack, onCreate, initial = null, p
     title: "", cat: (user.favCats && user.favCats[0]) || 1, city: user.city || "Ankara", district: user.district || "", venue: "",
     dateISO: days[0].iso, weekday: days[0].weekday, time: "21:00",
     recurrence: "yok", weeks: 8, needs: {},
-    capacity: "14", needed: "2", price: "150", level: "Farketmez", desc: "",
+    capacity: "14", needed: "2", price: "150", totalCost: "", level: "Farketmez", desc: "",
     kind: "oyuncu", teamName: user.teamName || "", format: DEFAULT_FORMAT[1], venueMode: "bizde", costMode: "yari_yariya", offlineRegulars: "0",
     ...(preset === "ekip" ? { title: "", recurrence: "haftalik", weeks: 0, needed: "2", offlineRegulars: "10" } : {}),
     ...(preset === "rakip" ? { kind: "rakip", capacity: "7", needed: "1" } : {}),
@@ -245,10 +245,24 @@ export default function CreateScreen({ user, onBack, onCreate, initial = null, p
           </View>
           <View style={{ flex: 1 }}>
             <Field label={t("Ücret (₺)")}>
-              <Input keyboardType="number-pad" value={f.price} onChangeText={set("price")} />
+              <Input keyboardType="number-pad" value={f.price} onChangeText={(v) => setF((s) => ({ ...s, price: v, totalCost: "" }))} editable={!f.totalCost} style={f.totalCost ? { opacity: 0.6 } : null} />
             </Field>
           </View>
         </View>
+        )}
+        {!rakip && (
+          <Field label={t("Saha toplam ücreti (isteğe bağlı)")}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Input keyboardType="number-pad" placeholder={t("ör. 2000")} value={f.totalCost} style={{ flex: 1 }}
+                onChangeText={(v) => { const toplam = Number(v) || 0; const kisi = Math.max(1, Number(f.capacity) || 1); setF((s) => ({ ...s, totalCost: v, price: toplam > 0 ? String(Math.ceil(toplam / kisi)) : s.price })); }} />
+              {Number(f.totalCost) > 0 ? (
+                <View style={{ backgroundColor: C.pitchSoft, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8 }}>
+                  <Text style={{ fontSize: 12, fontWeight: "800", color: C.pitch }}>÷ {f.capacity} = {f.price}₺</Text>
+                </View>
+              ) : null}
+            </View>
+            <Text style={{ fontSize: 11, color: C.faint, marginTop: 4 }}>{t("Toplamı yazarsan kişi başını biz hesaplarız; maç günü gelenlere göre tek dokunuşla yeniden bölersin.")}</Text>
+          </Field>
         )}
 
         {!rakip && posList.length > 0 && Number(f.needed) > 0 && (
