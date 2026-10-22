@@ -152,7 +152,7 @@ export default function AuthScreen({ onLogin, onRegister, onResetRequest, onRese
   };
   const sifreyiGuncelle = async () => {
     setLocalError(null);
-    if (resetKod.trim().length < 6) { setLocalError("E-postana gelen 6 haneli kodu gir"); return; }
+    if (resetKod.trim().length < 6) { setLocalError("E-postana gelen kodu eksiksiz gir"); return; }
     if (yeniSifre.length < 6) { setLocalError("Yeni şifre en az 6 karakter olmalı"); return; }
     if (yeniSifre !== yeniSifre2) { setLocalError("Şifreler birbirini tutmuyor"); return; }
     await onResetConfirm({ email: resetMail.trim(), code: resetKod.trim(), password: yeniSifre });
@@ -218,8 +218,8 @@ export default function AuthScreen({ onLogin, onRegister, onResetRequest, onRese
             </>
           ) : (
             <>
-              <Alan label="6 haneli kod">
-                <Kutu placeholder="••••••" value={resetKod} onChangeText={(v) => setResetKod(v.replace(/\D/g, "").slice(0, 6))} keyboardType="number-pad" textContentType="oneTimeCode" autoFocus style={{ textAlign: "center", letterSpacing: 8, fontSize: 20, fontWeight: "700" }} />
+              <Alan label="E-postana gelen kod">
+                <Kutu placeholder="• • • • • •" value={resetKod} onChangeText={(v) => setResetKod(v.replace(/\D/g, "").slice(0, 10))} keyboardType="number-pad" textContentType="oneTimeCode" autoFocus style={{ textAlign: "center", letterSpacing: 4, fontSize: 20, fontWeight: "700" }} />
               </Alan>
               <Alan label="Yeni şifre"><SifreKutu value={yeniSifre} onChangeText={setYeniSifre} yeni /></Alan>
               <Alan label="Yeni şifre (tekrar)"><SifreKutu value={yeniSifre2} onChangeText={setYeniSifre2} yeni /></Alan>

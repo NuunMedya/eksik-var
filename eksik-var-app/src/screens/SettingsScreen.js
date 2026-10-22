@@ -69,7 +69,7 @@ function GuvenlikBolumu({ authEmail, pendingEmail, onChangePassword, onChangeEma
   React.useEffect(() => { setBekleyen(pendingEmail || null); }, [pendingEmail]);
   const kodDogrula = async () => {
     setMesaj(null);
-    if (kod.trim().length < 6) return setMesaj({ hata: true, m: "E-postana gelen 6 haneli kodu gir" });
+    if (kod.trim().length < 6) return setMesaj({ hata: true, m: "E-postana gelen kodu eksiksiz gir" });
     setBusy(true);
     try { await onVerifyEmail(bekleyen, kod); setKod(""); setBekleyen(null); setMesaj({ m: "E-posta doğrulandı ✓ Artık şifreni bununla sıfırlayabilirsin" }); setAcik(null); }
     catch { setMesaj({ hata: true, m: "Kod hatalı ya da süresi dolmuş" }); }
@@ -132,7 +132,7 @@ function GuvenlikBolumu({ authEmail, pendingEmail, onChangePassword, onChangeEma
             {bekleyen ? (
               <>
                 <Text style={{ fontSize: 12, color: C.faint }}>{bekleyen} adresine gelen kodu gir (spam klasörünü de kontrol et):</Text>
-                <TextInput placeholder="••••••" placeholderTextColor={C.placeholder} keyboardType="number-pad" textContentType="oneTimeCode" value={kod} onChangeText={(v) => setKod(v.replace(/\D/g, "").slice(0, 6))} style={[st.input, { textAlign: "center", letterSpacing: 8, fontSize: 18, fontWeight: "700" }]} />
+                <TextInput placeholder="• • • • • •" placeholderTextColor={C.placeholder} keyboardType="number-pad" textContentType="oneTimeCode" value={kod} onChangeText={(v) => setKod(v.replace(/\D/g, "").slice(0, 10))} style={[st.input, { textAlign: "center", letterSpacing: 4, fontSize: 18, fontWeight: "700" }]} />
                 <TouchableOpacity onPress={kodDogrula} disabled={busy} style={[st.btn, busy && { opacity: 0.6 }]}><Text style={st.btnText}>{busy ? "Doğrulanıyor…" : "Doğrula"}</Text></TouchableOpacity>
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                   <TouchableOpacity onPress={() => { setMail(bekleyen); mailKaydet(); }} disabled={busy}><Text style={{ fontSize: 12, fontWeight: "700", color: C.pitch }}>Kodu tekrar gönder</Text></TouchableOpacity>
