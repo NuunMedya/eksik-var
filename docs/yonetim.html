@@ -311,6 +311,7 @@ async function loadUsers(){
         ${u.status!=="banli" ? `<button class="b-sar" onclick="actSuspend('${u.id}','${esc(u.full_name||"")}')">⏸ Askıya al</button>
         <button class="b-kir" onclick="actBan('${u.id}','${esc(u.full_name||"")}')">⛔ Banla</button>` : ""}
         ${u.status!=="aktif" ? `<button class="b-tur" onclick="actReinstate('${u.id}','${esc(u.full_name||"")}')">↩️ Geri al (aktifleştir)</button>` : ""}
+        <button class="b-sar" onclick="actResetPass('${u.id}','${esc(u.full_name||"")}')">🔑 Geçici şifre ver</button>
       </div>
     </div>`).join("");
 }
@@ -351,6 +352,13 @@ function actOnay(id, name, karar){
   const msg = karar === "onayli" ? `✅ ${name} hesabı onaylanacak; profilinde onaylı rozet görünecek.` : `✖ ${name} hesap türü talebi reddedilecek; kullanıcı oyuncu olarak devam eder.`;
   if (!confirm(msg)) return;
   run("set_hesap_onay", { p_user: id, p_karar: karar }, karar === "onayli" ? "Onaylandı." : "Reddedildi.", refreshCurrent);
+}
+
+function actResetPass(id, name){
+  const gecici = String(Math.floor(100000 + Math.random()*900000));
+  if (!confirm(`🔑 ${name} için geçici şifre: ${gecici}\n\nKullanıcıya WhatsApp/telefonla ilet; girince Ayarlar → Şifre değiştir'den kendi şifresini belirlesin. Devam?`)) return;
+  run("admin_reset_password", { p_user: id, p_new: gecici }, `Geçici şifre: ${gecici} (kullanıcıya ilet)`, refreshCurrent);
+  try { navigator.clipboard.writeText(gecici); } catch {}
 }
 
 /* ---------- eylemler ---------- */

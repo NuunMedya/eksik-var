@@ -102,6 +102,11 @@ const friendly = (e) => {
   if (m.includes("Kontenjan dolu")) return "Kontenjan doldu";
   if (m.includes("başvuruya kapalı")) return "Bu etkinlik başvuruya kapalı";
   if (m.includes("Invalid login")) return "Giriş bilgileri hatalı";
+  if (m.includes("rate limit") || m.includes("Too many")) return "Çok sık denendi, birkaç dakika sonra tekrar dene";
+  if (m.includes("User not found") || m.includes("not found")) return "Bu e-postayla kayıtlı hesap bulunamadı";
+  if (m.includes("Token has expired") || m.includes("otp_expired")) return "Kod hatalı ya da süresi dolmuş";
+  if (m.includes("same_password") || m.includes("different from the old")) return "Yeni şifre eskisiyle aynı olamaz";
+  if (m.includes("email_exists") || m.includes("already been registered")) return "Bu e-posta başka bir hesapta kayıtlı";
   if (m.includes("already registered")) return "Bu numara zaten kayıtlı — Giriş yap sekmesini kullan";
   if (m.includes("Signups not allowed") || m.includes("otp_disabled")) return "Bu numara kayıtlı değil — Kayıt ol sekmesini kullan";
   if (m.includes("Token has expired") || m.includes("invalid") && m.includes("otp")) return "Kod hatalı ya da süresi dolmuş";
@@ -516,6 +521,22 @@ export default function LiveApp() {
     } catch (e) { setAuthError(friendly(e)); }
     finally { setAuthBusy(false); }
   };
+  const handleResetRequest = async (email) => {
+    setAuthError(null); setAuthBusy(true);
+    try { await api.requestPasswordReset(email); return true; }
+    catch (e) { setAuthError(friendly(e)); return false; }
+    finally { setAuthBusy(false); }
+  };
+  const handleResetConfirm = async (f) => {
+    setAuthError(null); setAuthBusy(true);
+    try { await api.confirmPasswordReset(f); showToast(t("Şifren güncellendi, hoş geldin")); }
+    catch (e) { setAuthError(friendly(e)); }
+    finally { setAuthBusy(false); }
+  };
+  const [authEmail, setAuthEmail] = useState(null);
+  useEffect(() => { if (session) api.authEmail().then(setAuthEmail).catch(() => {}); else setAuthEmail(null); }, [session]);
+  const changePassword = ({ current, next }) => api.changePassword({ phone: session && session.user && session.user.phone ? "+" + String(session.user.phone).replace(/^\+/, "") : "", current, next });
+  const changeEmail = async (email) => { const m = await api.changeEmail(meId, email); setAuthEmail(m); };
   const logout = async () => { await api.signOut(); setView({ name: "root" }); setTab("home"); };
 
   /* ---------- yardımcılar ---------- */
@@ -877,7 +898,7 @@ export default function LiveApp() {
       <View style={{ flex: 1, backgroundColor: C.chalk }}>
         <StatusBar style={C.isDark ? "light" : "dark"} />
         <SafeAreaView style={{ flex: 1 }}>
-          <AuthScreen onLogin={handleLogin} onRegister={handleRegister} busy={authBusy} error={authError} />
+          <AuthScreen onLogin={handleLogin} onRegister={handleRegister} onResetRequest={handleResetRequest} onResetConfirm={handleResetConfirm} busy={authBusy} error={authError} />
         </SafeAreaView>
       </View>
     );
@@ -1058,7 +1079,8 @@ export default function LiveApp() {
           {view.name === "settings" && (
             <View style={StyleSheet.absoluteFill}>
               <SettingsScreen settings={settings} onChange={changeSettings} onBack={() => setView({ name: "root" })} onDeleteAccount={deleteAccount}
-                blockedCount={blocked.length} onBlocked={() => setView({ name: "blocked" })} paymentDetails={paymentDetails} onSaveIban={saveIban} onTheme={saveTheme} onLang={saveLang} />
+                blockedCount={blocked.length} onBlocked={() => setView({ name: "blocked" })} paymentDetails={paymentDetails} onSaveIban={saveIban} onTheme={saveTheme} onLang={saveLang}
+                authEmail={authEmail} onChangePassword={changePassword} onChangeEmail={changeEmail} />
             </View>
           )}
           {rateEvent && (

@@ -60,7 +60,74 @@ function Row({ icon, title, desc, value, onChange }) {
   );
 }
 
-export default function SettingsScreen({ settings, onChange, onBack, onDeleteAccount, blockedCount = 0, onBlocked, paymentDetails = null, onSaveIban = () => {}, onTheme = () => {}, onLang = () => {} }) {
+function GuvenlikBolumu({ authEmail, onChangePassword, onChangeEmail }) {
+  const [acik, setAcik] = React.useState(null); // "sifre" | "eposta" | null
+  const [mevcut, setMevcut] = React.useState(""); const [yeni, setYeni] = React.useState(""); const [yeni2, setYeni2] = React.useState("");
+  const [mail, setMail] = React.useState(authEmail || ""); const [mesaj, setMesaj] = React.useState(null); const [busy, setBusy] = React.useState(false);
+  React.useEffect(() => { setMail(authEmail || ""); }, [authEmail]);
+  const gizliKutu = (ph, v, set) => (
+    <TextInput placeholder={ph} placeholderTextColor={C.placeholder} secureTextEntry autoCapitalize="none" value={v} onChangeText={set} style={st.input} />
+  );
+  const sifreKaydet = async () => {
+    setMesaj(null);
+    if (!mevcut) return setMesaj({ hata: true, m: "Mevcut şifreni gir" });
+    if (yeni.length < 6) return setMesaj({ hata: true, m: "Yeni şifre en az 6 karakter olmalı" });
+    if (yeni !== yeni2) return setMesaj({ hata: true, m: "Yeni şifreler birbirini tutmuyor" });
+    setBusy(true);
+    try { await onChangePassword({ current: mevcut, next: yeni }); setMevcut(""); setYeni(""); setYeni2(""); setMesaj({ m: "Şifren güncellendi ✓" }); setAcik(null); }
+    catch (e) { setMesaj({ hata: true, m: e && e.message === "MEVCUT_SIFRE_YANLIS" ? "Mevcut şifre yanlış" : "Şifre güncellenemedi, tekrar dene" }); }
+    finally { setBusy(false); }
+  };
+  const mailKaydet = async () => {
+    setMesaj(null);
+    const m = mail.trim();
+    if (m && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m)) return setMesaj({ hata: true, m: "Geçerli bir e-posta adresi gir" });
+    setBusy(true);
+    try { await onChangeEmail(m); setMesaj({ m: m ? "E-posta kaydedildi ✓" : "E-posta kaldırıldı" }); setAcik(null); }
+    catch { setMesaj({ hata: true, m: "E-posta kaydedilemedi, tekrar dene" }); }
+    finally { setBusy(false); }
+  };
+  return (
+    <>
+      <Text style={st.section}>{t("Hesap güvenliği")}</Text>
+      <View style={st.card}>
+        <TouchableOpacity onPress={() => { setAcik(acik === "sifre" ? null : "sifre"); setMesaj(null); }} style={st.row}>
+          <Ionicons name="key-outline" size={18} color={C.turfText} style={{ width: 26 }} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontWeight: "700", fontSize: 14, color: C.ink }}>{t("Şifre değiştir")}</Text>
+            <Text style={{ fontSize: 12, color: C.faint, marginTop: 1 }}>{t("Mevcut şifrenle doğrula, yenisini belirle")}</Text>
+          </View>
+          <Ionicons name={acik === "sifre" ? "chevron-up" : "chevron-forward"} size={16} color={C.faint} />
+        </TouchableOpacity>
+        {acik === "sifre" && (
+          <View style={{ paddingHorizontal: 14, paddingBottom: 14, gap: 8 }}>
+            {gizliKutu("Mevcut şifre", mevcut, setMevcut)}
+            {gizliKutu("Yeni şifre (en az 6 karakter)", yeni, setYeni)}
+            {gizliKutu("Yeni şifre (tekrar)", yeni2, setYeni2)}
+            <TouchableOpacity onPress={sifreKaydet} disabled={busy} style={[st.btn, busy && { opacity: 0.6 }]}><Text style={st.btnText}>{busy ? "Kaydediliyor…" : "Şifreyi güncelle"}</Text></TouchableOpacity>
+          </View>
+        )}
+        <TouchableOpacity onPress={() => { setAcik(acik === "eposta" ? null : "eposta"); setMesaj(null); }} style={[st.row, { borderTopWidth: 1, borderTopColor: C.line }]}>
+          <Ionicons name="mail-outline" size={18} color={C.turfText} style={{ width: 26 }} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontWeight: "700", fontSize: 14, color: C.ink }}>{t("Kurtarma e-postası")}</Text>
+            <Text style={{ fontSize: 12, color: authEmail ? C.faint : C.kit, marginTop: 1 }}>{authEmail || t("Ekli değil — şifreni unutursan sıfırlayamazsın")}</Text>
+          </View>
+          <Ionicons name={acik === "eposta" ? "chevron-up" : "chevron-forward"} size={16} color={C.faint} />
+        </TouchableOpacity>
+        {acik === "eposta" && (
+          <View style={{ paddingHorizontal: 14, paddingBottom: 14, gap: 8 }}>
+            <TextInput placeholder="ornek@mail.com" placeholderTextColor={C.placeholder} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} value={mail} onChangeText={setMail} style={st.input} />
+            <TouchableOpacity onPress={mailKaydet} disabled={busy} style={[st.btn, busy && { opacity: 0.6 }]}><Text style={st.btnText}>{busy ? "Kaydediliyor…" : "E-postayı kaydet"}</Text></TouchableOpacity>
+          </View>
+        )}
+        {mesaj ? <Text style={{ paddingHorizontal: 14, paddingBottom: 12, fontSize: 12, fontWeight: "700", color: mesaj.hata ? C.danger : C.pitch }}>{mesaj.m}</Text> : null}
+      </View>
+    </>
+  );
+}
+
+export default function SettingsScreen({ settings, onChange, onBack, onDeleteAccount, blockedCount = 0, onBlocked, paymentDetails = null, onSaveIban = () => {}, onTheme = () => {}, onLang = () => {}, authEmail = null, onChangePassword = null, onChangeEmail = null }) {
   const themeMode = getThemeMode(); const [iban, setIban] = React.useState(paymentDetails ? paymentDetails.iban : "");
   const [holder, setHolder] = React.useState(paymentDetails ? paymentDetails.holder : "");
   const ibanOk = isValidIban(iban);
@@ -205,12 +272,14 @@ export default function SettingsScreen({ settings, onChange, onBack, onDeleteAcc
           {iban.length > 0 && !ibanOk && <Text style={{ fontSize: 11, color: C.kit, marginTop: 6 }}>{t("IBAN \"TR\" ile başlayıp 26 karakter olmalı.")}</Text>}
         </View>
 
+        {onChangePassword ? <GuvenlikBolumu authEmail={authEmail} onChangePassword={onChangePassword} onChangeEmail={onChangeEmail} /> : null}
+
         <Text style={st.section}>{t("settings.legal")}</Text>
         <View style={st.card}>
-          {[["Gizlilik Politikası", "https://eksikvar.app/gizlilik"], ["KVKK Aydınlatma Metni", "https://eksikvar.app/kvkk"], ["Kullanım Şartları", "https://eksikvar.app/kullanim-sartlari"]].map(([t, u]) => (
-            <TouchableOpacity key={t} onPress={() => open(u)} style={st.row}>
+          {[["Gizlilik Politikası", "https://eksikvarapp.com/gizlilik.html"], ["KVKK Aydınlatma Metni", "https://eksikvarapp.com/gizlilik.html"], ["Hesap silme", "https://eksikvarapp.com/hesap-silme.html"]].map(([ad, u]) => (
+            <TouchableOpacity key={ad} onPress={() => open(u)} style={st.row}>
               <Ionicons name="document-text-outline" size={18} color={C.turfText} style={{ width: 26 }} />
-              <Text style={{ flex: 1, fontWeight: "700", fontSize: 14, color: C.ink }}>{t}</Text>
+              <Text style={{ flex: 1, fontWeight: "700", fontSize: 14, color: C.ink }}>{ad}</Text>
               <Ionicons name="open-outline" size={16} color={C.faint} />
             </TouchableOpacity>
           ))}
@@ -228,6 +297,8 @@ export default function SettingsScreen({ settings, onChange, onBack, onDeleteAcc
 }
 
 const mkSt = () => StyleSheet.create({
+  btn: { backgroundColor: C.pitch, borderRadius: 10, alignItems: "center", paddingVertical: 11, marginTop: 2 },
+  btnText: { color: "#fff", fontWeight: "800", fontSize: 13 },
   header: {
     backgroundColor: C.turf, flexDirection: "row", alignItems: "center",
     paddingHorizontal: 14, paddingVertical: 12,

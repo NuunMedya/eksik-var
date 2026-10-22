@@ -121,8 +121,13 @@ function Cip({ aktif, onPress, children }) {
 }
 
 /* ───────── ana ekran ───────── */
-export default function AuthScreen({ onLogin, onRegister, busy = false, error = null, demoHint = null }) {
-  const [mode, setMode] = useState("login"); // login | register | role
+export default function AuthScreen({ onLogin, onRegister, onResetRequest, onResetConfirm, busy = false, error = null, demoHint = null }) {
+  const [mode, setMode] = useState("login"); // login | register | role | reset
+  const [resetAdim, setResetAdim] = useState(1);  // 1: e-posta → 2: kod + yeni şifre
+  const [resetMail, setResetMail] = useState("");
+  const [resetKod, setResetKod] = useState("");
+  const [yeniSifre, setYeniSifre] = useState("");
+  const [yeniSifre2, setYeniSifre2] = useState("");
   const [rol, setRol] = useState(null);       // role modunda: isletme | organizator | hakem | medya
   const [bilgiAcik, setBilgiAcik] = useState(false);
   const [f, setF] = useState({
@@ -136,7 +141,22 @@ export default function AuthScreen({ onLogin, onRegister, busy = false, error = 
   const e164 = normalizePhone(f.phone);
   const shownError = localError || error;
 
-  const git = (m, r = null) => { setMode(m); setRol(r); setLocalError(null); setAgreed(false); setBilgiAcik(false); };
+  const git = (m, r = null) => { setMode(m); setRol(r); setLocalError(null); setAgreed(false); setBilgiAcik(false); if (m === "reset") { setResetAdim(1); setResetKod(""); setYeniSifre(""); setYeniSifre2(""); } };
+
+  const kodIste = async () => {
+    setLocalError(null);
+    const m = resetMail.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m)) { setLocalError("Geçerli bir e-posta adresi gir"); return; }
+    const ok = await onResetRequest(m);
+    if (ok) setResetAdim(2);
+  };
+  const sifreyiGuncelle = async () => {
+    setLocalError(null);
+    if (resetKod.trim().length < 6) { setLocalError("E-postana gelen 6 haneli kodu gir"); return; }
+    if (yeniSifre.length < 6) { setLocalError("Yeni şifre en az 6 karakter olmalı"); return; }
+    if (yeniSifre !== yeniSifre2) { setLocalError("Şifreler birbirini tutmuyor"); return; }
+    await onResetConfirm({ email: resetMail.trim(), code: resetKod.trim(), password: yeniSifre });
+  };
 
   const girisYap = async () => {
     setLocalError(null);
@@ -164,6 +184,56 @@ export default function AuthScreen({ onLogin, onRegister, busy = false, error = 
       email: f.email.trim() || null,
     });
   };
+
+  /* ── ŞİFRE SIFIRLAMA (e-posta kodu) ── */
+  if (mode === "reset") {
+    return (
+      <KeyboardAvoidingView style={st.ekran} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <ScrollView contentContainerStyle={st.sayfa} keyboardShouldPersistTaps="handled">
+          <TouchableOpacity onPress={() => git("login")} style={st.geri} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons name="chevron-back" size={24} color={C.ink} />
+          </TouchableOpacity>
+          <View style={{ alignItems: "center", marginTop: 4, marginBottom: 20 }}>
+            <View style={[st.rolDaire, { backgroundColor: C.pitchSoft }]}>
+              <Ionicons name={resetAdim === 1 ? "mail-outline" : "key-outline"} size={34} color={C.pitch} />
+            </View>
+            <Text style={[st.baslikBuyuk, { marginTop: 14 }]}>{resetAdim === 1 ? "Şifreni sıfırla" : "Kodu gir"}</Text>
+            <Text style={st.altYazi}>
+              {resetAdim === 1
+                ? "Kayıt olurken verdiğin e-posta adresini yaz; sana 6 haneli bir kod gönderelim."
+                : `${resetMail.trim()} adresine gelen kodu ve yeni şifreni gir.`}
+            </Text>
+          </View>
+
+          {resetAdim === 1 ? (
+            <>
+              <Alan label="E-posta">
+                <Kutu placeholder="ornek@mail.com" value={resetMail} onChangeText={setResetMail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} textContentType="emailAddress" autoFocus />
+              </Alan>
+              {shownError ? <Text style={st.hata}>{shownError}</Text> : null}
+              <Buton label="Kod gönder" onPress={kodIste} renk={C.pitch} busy={busy} />
+              <Text style={[st.ipucu, { textAlign: "center", marginTop: 16 }]}>
+                Hesabında e-posta yoksa destek@eksikvarapp.com adresine yaz, şifreni biz sıfırlayalım.
+              </Text>
+            </>
+          ) : (
+            <>
+              <Alan label="6 haneli kod">
+                <Kutu placeholder="••••••" value={resetKod} onChangeText={(v) => setResetKod(v.replace(/\D/g, "").slice(0, 6))} keyboardType="number-pad" textContentType="oneTimeCode" autoFocus style={{ textAlign: "center", letterSpacing: 8, fontSize: 20, fontWeight: "700" }} />
+              </Alan>
+              <Alan label="Yeni şifre"><SifreKutu value={yeniSifre} onChangeText={setYeniSifre} yeni /></Alan>
+              <Alan label="Yeni şifre (tekrar)"><SifreKutu value={yeniSifre2} onChangeText={setYeniSifre2} yeni /></Alan>
+              {shownError ? <Text style={st.hata}>{shownError}</Text> : null}
+              <Buton label="Şifreyi güncelle" onPress={sifreyiGuncelle} renk={C.pitch} busy={busy} />
+              <TouchableOpacity onPress={kodIste} disabled={busy} style={{ alignItems: "center", marginTop: 14 }}>
+                <Text style={st.altLink}>Kod gelmedi mi? <Text style={{ color: C.pitch, fontWeight: "800" }}>Tekrar gönder</Text></Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
 
   /* ── ROL KAYDI (kısa form) ── */
   if (mode === "role" && rol) {
@@ -316,8 +386,8 @@ export default function AuthScreen({ onLogin, onRegister, busy = false, error = 
             {shownError ? <Text style={st.hata}>{shownError}</Text> : null}
             <Buton label="Giriş Yap" onPress={girisYap} renk={C.pitch} busy={busy} />
 
-            <TouchableOpacity onPress={() => Linking.openURL("mailto:destek@eksikvarapp.com?subject=Şifre%20sıfırlama").catch(() => {})} style={{ alignItems: "center", marginTop: 14 }}>
-              <Text style={st.altLink}>Şifreni mi unuttun? <Text style={{ color: C.pitch, fontWeight: "800" }}>Bize yaz</Text></Text>
+            <TouchableOpacity onPress={() => git("reset")} style={{ alignItems: "center", marginTop: 14 }}>
+              <Text style={st.altLink}>Şifreni mi unuttun? <Text style={{ color: C.pitch, fontWeight: "800" }}>Şifremi sıfırla</Text></Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => git("register")} style={{ alignItems: "center", marginTop: 8 }}>
               <Text style={st.altLink}>Hesabın yok mu? <Text style={{ color: C.pitch, fontWeight: "800" }}>Hesap oluştur</Text></Text>

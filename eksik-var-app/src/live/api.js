@@ -199,6 +199,7 @@ export async function signUpPhone({ phone, password, name, username, city, distr
     if (accountType && accountType !== "oyuncu") { ek.hesap_turu = accountType; ek.hesap_onay = "bekliyor"; }
     if (email) ek.email = email;
     if (Object.keys(ek).length) { try { await supabase.from("users").update(ek).eq("id", uid); } catch { /* sessiz */ } }
+    if (email && data.session) { try { await supabase.auth.updateUser({ email }); } catch { /* sessiz: e-posta sonradan Ayarlar'dan eklenebilir */ } }
   }
   return data.session;
 }
@@ -228,6 +229,34 @@ export async function signIn({ email, pass }) {
   if (error) throw error;
   return data.session;
 }
+/* ---------- şifre: sıfırlama (e-posta kodu) ve değiştirme ---------- */
+// Dışarıdaki kullanıcı: e-postasına 6 haneli kod gider (Supabase "Reset Password" şablonu {{ .Token }} içermeli)
+export async function requestPasswordReset(email) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase());
+  if (error) throw error;
+}
+// Kod doğrulanır (oturum açılır) ve yeni şifre yazılır
+export async function confirmPasswordReset({ email, code, password }) {
+  const { error: e1 } = await supabase.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code.trim(), type: "recovery" });
+  if (e1) throw e1;
+  const { error: e2 } = await supabase.auth.updateUser({ password });
+  if (e2) throw e2;
+}
+// İçerideki kullanıcı: mevcut şifre doğrulanır, yenisi yazılır
+export async function changePassword({ phone, current, next }) {
+  const { error: e1 } = await supabase.auth.signInWithPassword({ phone, password: current });
+  if (e1) throw new Error("MEVCUT_SIFRE_YANLIS");
+  const { error: e2 } = await supabase.auth.updateUser({ password: next });
+  if (e2) throw e2;
+}
+// İçerideki kullanıcı: kurtarma e-postasını ekler / değiştirir (users.email ile birlikte)
+export async function changeEmail(uid, email) {
+  const temiz = (email || "").trim().toLowerCase() || null;
+  if (temiz) { const { error } = await supabase.auth.updateUser({ email: temiz }); if (error) throw error; }
+  await supabase.from("users").update({ email: temiz }).eq("id", uid);
+  return temiz;
+}
+export const authEmail = async () => { const { data } = await supabase.auth.getUser(); return (data && data.user && data.user.email) || null; };
 export const signOut = () => supabase.auth.signOut();
 export const getSession = async () => (await supabase.auth.getSession()).data.session;
 export const onAuthChange = (cb) => supabase.auth.onAuthStateChange((_e, session) => cb(session));
