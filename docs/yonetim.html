@@ -81,12 +81,9 @@
     <div id="loginErr" class="err hide"></div>
     <div id="stepPhone">
       <input id="phone" placeholder="Telefon (05xx xxx xx xx)" inputmode="tel" autocomplete="tel">
-      <button class="btn" id="btnSend" onclick="sendCode()">SMS kodu gönder</button>
-    </div>
-    <div id="stepCode" class="hide">
-      <input id="code" placeholder="6 haneli kod" inputmode="numeric" maxlength="6">
-      <button class="btn" id="btnVerify" onclick="verifyCode()">Doğrula ve gir</button>
-      <button class="lnk" onclick="backToPhone()">Numarayı değiştir</button>
+      <input id="pass" type="password" placeholder="Şifre" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      <button class="btn" id="btnLogin" onclick="doLogin()">Giriş yap</button>
+      <div class="meta" style="margin-top:10px">Uygulamadaki telefon numaran ve şifrenle gir. Şifren yoksa Supabase → SQL Editor'den bir kez belirlenir (Ayarlar sekmesinde anlatılıyor).</div>
     </div>
   </div>
 </div>
@@ -144,12 +141,13 @@
         <button class="chipbtn on" onclick="actAddAdmin()">➕ Yönetici ekle</button>
       </div>
       <div id="admList"></div>
-      <h3 class="sec">🔑 Giriş kodları (test numaraları)</h3>
+      <h3 class="sec">🔑 Yönetici girişi</h3>
       <div class="item">
-        <div class="meta">Kurucu hesapların sabit giriş kodları Supabase kasasında tutulur ve güvenlik gereği yalnızca oradan değiştirilebilir:
-        Authentication → Sign In / Providers → <b>Phone</b> → <b>Test Phone Numbers</b>. Kendi numaralarınızın kodunu gizli tutun;
-        <b>905550000000=123456</b> satırı Google incelemesi içindir, silmeyin.</div>
-        <div class="row"><a href="https://supabase.com/dashboard/project/rxmngndtwndqbmlljhth/auth/providers" target="_blank"><button class="b-tur">🔐 Kod ayarlarını aç</button></a></div>
+        <div class="meta">Panele uygulamadaki telefon numaran ve şifrenle girilir; SMS yoktur. Şifreni unutursan ya da hiç belirlemediysen
+        Supabase → SQL Editor'de şunu çalıştır (numara 90 ile başlar, boşluksuz):<br>
+        <code>update auth.users set encrypted_password = extensions.crypt('YENI-SIFRE', extensions.gen_salt('bf')) where phone = '905xxxxxxxxx';</code><br>
+        <b>905550000000 / 123456</b> mağaza incelemesi için ayrılmış test hesabıdır, dokunmayın.</div>
+        <div class="row"><a href="https://supabase.com/dashboard/project/rxmngndtwndqbmlljhth/sql/new" target="_blank"><button class="b-tur">🧰 SQL Editor'ü aç</button></a></div>
       </div>
       <h3 class="sec">🔗 Hızlı bağlantılar</h3>
       <div class="item"><div class="row">
@@ -190,24 +188,18 @@ function normPhone(v){
   return "+" + d;
 }
 
-/* ---------- giriş akışı ---------- */
-async function sendCode(){
+/* ---------- giriş akışı: telefon + şifre ---------- */
+async function doLogin(){
   loginErr(); PHONE = normPhone($("phone").value);
+  const pass = $("pass").value;
   if (PHONE.length < 13) return loginErr("Geçerli bir numara gir (05xx xxx xx xx).");
-  $("btnSend").disabled = true;
-  const { error } = await db.auth.signInWithOtp({ phone: PHONE });
-  $("btnSend").disabled = false;
-  if (error) return loginErr("Kod gönderilemedi: " + error.message);
-  $("stepPhone").classList.add("hide"); $("stepCode").classList.remove("hide"); $("code").focus();
-}
-async function verifyCode(){
-  loginErr(); $("btnVerify").disabled = true;
-  const { error } = await db.auth.verifyOtp({ phone: PHONE, token: $("code").value.trim(), type: "sms" });
-  $("btnVerify").disabled = false;
-  if (error) return loginErr("Kod doğrulanamadı: " + error.message);
+  if (!pass) return loginErr("Şifreni gir.");
+  $("btnLogin").disabled = true;
+  const { error } = await db.auth.signInWithPassword({ phone: PHONE, password: pass });
+  $("btnLogin").disabled = false;
+  if (error) return loginErr(error.message.includes("Invalid") ? "Telefon ya da şifre hatalı." : "Giriş yapılamadı: " + error.message);
   gate();
 }
-function backToPhone(){ $("stepCode").classList.add("hide"); $("stepPhone").classList.remove("hide"); loginErr(); }
 async function signOut(){ await db.auth.signOut(); location.reload(); }
 
 /* ---------- yetki kapısı ---------- */

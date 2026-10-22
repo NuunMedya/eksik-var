@@ -150,32 +150,6 @@ export function mapChat(c, ctx) {
   };
 }
 
-/* ---------- kimlik: telefon + SMS kodu ---------- */
-// Kayıt: profil bilgileri metadata olarak gider, profil trigger'ı kullanır. Giriş: kayıtlı olmayan numara hata döner.
-export async function sendOtp({ mode, phone, name, username, city, district, favCats, positions }) {
-  const register = mode === "register";
-  let districtId = null;
-  const cityId = PLAKA[city] || null;
-  if (register && district && cityId) {
-    const { data: d } = await supabase.from("districts").select("id").eq("city_id", cityId).eq("name", district).maybeSingle();
-    districtId = d ? d.id : null;
-  }
-  const { error } = await supabase.auth.signInWithOtp({
-    phone,
-    options: {
-      channel: "sms",
-      shouldCreateUser: register,
-      data: register ? { full_name: name, username, city_id: cityId ? String(cityId) : "", district_id: districtId ? String(districtId) : "", phone, fav_cats: favCats || [], positions: positions || [] } : undefined,
-    },
-  });
-  if (error) throw error;
-}
-export async function verifyOtp(phone, token) {
-  const { data, error } = await supabase.auth.verifyOtp({ phone, token, type: "sms" });
-  if (error) throw error;
-  return data.session;
-}
-
 /* ---------- kimlik: telefon + şifre (SMS'siz, güncel akış) ---------- */
 // Kayıt: profil bilgileri metadata ile gider, satırı mevcut profil trigger'ı açar;
 // hesap türü ve e-posta hemen ardından users tablosuna yazılır.
