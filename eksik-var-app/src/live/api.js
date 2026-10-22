@@ -694,6 +694,27 @@ export async function addVenue(meId, cityName, categoryId, name, lat, lng) {
 
 /* ---------- sponsorlar ---------- */
 // Panelden yönetilir: Table Editor > sponsors. Boşsa uygulama varsayılanı gösterir.
+/* ---------- lig vitrini ---------- */
+export async function listLeagues(cityId) {
+  let q = supabase.from("lig_ilanlari")
+    .select("id, baslik, aciklama, afis_url, city_id, district_id, cat, baslangic, takim_ucreti, kontenjan, iletisim_tel, link, oncelik, cities(name), districts(name)")
+    .eq("aktif", true).order("oncelik").order("created_at", { ascending: false }).limit(10);
+  if (cityId) q = q.or(`city_id.is.null,city_id.eq.${cityId}`); else q = q.is("city_id", null);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data || []).map((l) => ({
+    id: l.id, baslik: l.baslik, aciklama: l.aciklama || "", afis: l.afis_url || null, cat: l.cat || 1,
+    city: l.cities ? l.cities.name : null, district: l.districts ? l.districts.name : null,
+    baslangic: l.baslangic, takimUcreti: l.takim_ucreti || null, kontenjan: l.kontenjan, tel: l.iletisim_tel || null, link: l.link || null,
+  }));
+}
+export const leagueSeen = (ids) => supabase.rpc("lig_goster", { p_ids: ids });
+export const leagueClick = (id) => supabase.rpc("lig_tikla", { p_id: id });
+export async function leagueApply(id, { tur, takim, not: notu }) {
+  const { error } = await supabase.rpc("lig_basvur", { p_id: id, p_tur: tur, p_takim: takim || null, p_not: notu || null });
+  if (error) throw error;
+}
+
 export async function listSponsors() {
   const { data, error } = await supabase.from("sponsors")
     .select("id, name, emoji, color, tagline, cta, url, priority, logo_url")

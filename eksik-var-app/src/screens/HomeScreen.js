@@ -10,6 +10,7 @@ import { CATEGORIES, GUNLER_UZUN, sortDistricts, needsSummary, venueModeLabel, c
 import { ILLER, ilceleri } from "../trIlIlce";
 import { Avatar, Stars, SquadDots, EksikBadge, Chip, PickerSheet } from "../components";
 import MarketCard from "./MarketCard";
+import LigKart from "./LigKart";
 import { marketFilter, posLabel } from "../data";
 
 function RakipCard({ ev, onOpen }) {
@@ -131,7 +132,15 @@ function Skeleton() {
   );
 }
 
-export default function HomeScreen({ user, events, onOpen, onAttendance, onChangeCity, onNotifications, unreadCount = 0, blockedIds = [], onCreate = () => {}, onBringTeam = () => {}, loading = false, offline = false, sponsors = [], onSponsor = () => {}, market = [], onOpenPlayer = () => {}, onEditListing = () => {}, onOfferPlayer = null, initialKind = "oyuncu" , onCreateRakip, onMatches = () => {}, onOpenShowcase = () => {} }) {
+/* Öne çıkan (ilk) lig başlıkta; kalanlar akışa her 8 ilanda bir serpiştirilir */
+function ligSerpistir(list, leagues, kind) {
+  if (kind !== "oyuncu" || !leagues || leagues.length < 2 || list.length < 4) return list;
+  const out = []; let li = 1;
+  list.forEach((e, i) => { out.push(e); if ((i + 1) % 8 === 0 && li < leagues.length) { out.push({ id: "lig-" + leagues[li].id, kind: "lig", lig: leagues[li] }); li++; } });
+  return out;
+}
+
+export default function HomeScreen({ user, events, onOpen, onAttendance, onChangeCity, onNotifications, unreadCount = 0, blockedIds = [], onCreate = () => {}, onBringTeam = () => {}, loading = false, offline = false, sponsors = [], onSponsor = () => {}, market = [], onOpenPlayer = () => {}, onEditListing = () => {}, onOfferPlayer = null, initialKind = "oyuncu" , onCreateRakip, onMatches = () => {}, onOpenShowcase = () => {}, leagues = [], onLeagueApply = () => {}, onLeagueOpen = () => {} }) {
   const [district, setDistrict] = useState("Tümü");
   const [cat, setCat] = useState(1); // açılış: ⚽ seçili
   const [kind, setKind] = useState(initialKind);
@@ -236,13 +245,17 @@ export default function HomeScreen({ user, events, onOpen, onAttendance, onChang
       )}
       {loading && list.length === 0 ? <View style={{ padding: 16 }}><Skeleton /></View> : null}
       <FlatList
-        data={kind === "pazar" ? pazarAra(marketFilter(market, { cat, district })) : loading && list.length === 0 ? [] : list}
+        data={kind === "pazar" ? pazarAra(marketFilter(market, { cat, district })) : loading && list.length === 0 ? [] : ligSerpistir(list, leagues, kind)}
         keyExtractor={(e) => e.id}
         renderItem={({ item }) => kind === "pazar" ? <MarketCard p={item} onOpen={() => onOpenPlayer(item)} onOffer={onOfferPlayer} />
+          : item.kind === "lig" ? <LigKart lig={item.lig} onApply={onLeagueApply} onOpen={onLeagueOpen} />
           : item.kind === "rakip" ? <RakipCard ev={item} onOpen={onOpen} /> : <EventCard ev={item} onOpen={onOpen} />}
         contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
         ListHeaderComponent={
           <View>
+            {kind === "oyuncu" && leagues.length > 0 && (
+              <LigKart lig={leagues[0]} featured onApply={onLeagueApply} onOpen={onLeagueOpen} />
+            )}
             {kind === "pazar" && (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: C.surface, borderRadius: 14, borderWidth: 1, borderColor: C.line, paddingHorizontal: 12, marginBottom: 12 }}>
                 <Ionicons name="search" size={16} color={C.faint} />

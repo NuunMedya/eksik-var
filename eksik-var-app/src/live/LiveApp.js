@@ -150,6 +150,7 @@ export default function LiveApp() {
   const [chats, setChats] = useState([]);
   const [notifs, setNotifs] = useState([]);
   const [sponsors, setSponsors] = useState(DEFAULT_SPONSORS);   // panel listesi varsayılanı ezer
+  const [leagues, setLeagues] = useState([]);
   const [posts, setPosts] = useState([]);
   const [composer, setComposer] = useState(false);
   const [postBusy, setPostBusy] = useState(false);
@@ -884,6 +885,27 @@ export default function LiveApp() {
   useEffect(() => { if (meId && user) refreshPosts(); }, [meId, user && user.city]);
   useEffect(() => { if (meId && user) { refreshOffers(); api.myTeam(meId).then(setMyTeamRow).catch(() => {}); } }, [meId]);
   useEffect(() => { if (meId) api.listSponsors().then((x) => { if (x.length) setSponsors(x); }).catch(() => { /* tablo yoksa varsayılan */ }); }, [meId]);
+  useEffect(() => {
+    if (!meId || !user) return;
+    api.listLeagues(user.cityId).then((ls) => { setLeagues(ls); if (ls.length) api.leagueSeen(ls.map((l) => l.id)).catch(() => {}); }).catch(() => setLeagues([]));
+  }, [meId, user && user.cityId]);
+  const ligBasvur = (lig) => {
+    const gonder = async (tur) => {
+      try { await api.leagueApply(lig.id, { tur, takim: tur === "takim" ? (myTeamRow && myTeamRow.name) || null : null }); } catch { /* sayaç; akışı kesme */ }
+      api.leagueClick(lig.id).catch(() => {});
+      const kim = tur === "takim" ? `${(myTeamRow && myTeamRow.name) ? myTeamRow.name + " takımı" : "Takımımız"} ile` : "Takımım yok, oyuncu olarak";
+      const msg = `Merhaba, Eksik Var'da "${lig.baslik}" ilanınızı gördüm. ${kim} lige katılmak istiyorum. (${user.name})`;
+      if (lig.tel) Linking.openURL(`https://wa.me/${String(lig.tel).replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`).catch(() => showToast(t("WhatsApp açılamadı")));
+      else if (lig.link) Linking.openURL(lig.link).catch(() => {});
+      else showToast(t("Başvurun iletildi, organizatör seninle iletişime geçecek"));
+    };
+    Alert.alert(lig.baslik, t("Nasıl başvurmak istersin?"), [
+      { text: "🛡️ " + t("Takımımla başvur"), onPress: () => gonder("takim") },
+      { text: "🙋 " + t("Takımım yok, beni yerleştirin"), onPress: () => gonder("oyuncu") },
+      { text: t("Vazgeç"), style: "cancel" },
+    ]);
+  };
+  const ligAc = (lig) => { api.leagueClick(lig.id).catch(() => {}); if (lig.link) Linking.openURL(lig.link).catch(() => showToast(t("Bağlantı açılamadı"))); };
 
   /* ---------- yerleşim ---------- */
   if (session === undefined)
@@ -963,7 +985,7 @@ export default function LiveApp() {
               onAttendance={(id) => setView({ name: "attendance", id })} onChangeCity={changeCity}
               onNotifications={() => setView({ name: "notifications" })} unreadCount={unreadNotifs} blockedIds={blocked.map((b) => b.id)}
               onCreate={() => setView({ name: "create" })} onCreateRakip={() => setView({ name: "create", preset: "rakip" })} onBringTeam={() => setView({ name: "create", preset: "ekip" })} loading={loading} offline={offline}
-              sponsors={sponsors}
+              sponsors={sponsors} leagues={leagues} onLeagueApply={ligBasvur} onLeagueOpen={ligAc}
               onSponsor={(sp) => { api.sponsorClick(sp.id).catch(() => {}); Linking.openURL(sp.url).catch(() => showToast(t("Bağlantı açılamadı"))); }}
               market={market} onOpenPlayer={(p) => p.userId === "me" ? setTab("profile") : openProfile({ id: p.userId, name: p.name })}
               onEditListing={() => setView({ name: "editProfile" })}

@@ -56,6 +56,9 @@
   .row button{padding:8px 12px;font-size:12.5px}
   .b-gri{background:#EEF4EF;color:var(--pitch)}
   .b-tur{background:var(--turf);color:#fff}
+  .ligGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
+  .ligGrid input,.ligGrid select{width:100%;box-sizing:border-box}
+  .ligStat{display:inline-block;margin-right:12px;font-weight:700}
   .b-sar{background:#FDF1E3;color:var(--amber)}
   .b-kir{background:#FBE9E7;color:var(--red)}
   .badge{display:inline-block;padding:3px 9px;border-radius:99px;font-size:11.5px;font-weight:800;vertical-align:middle}
@@ -109,6 +112,7 @@
     <button id="t-sikayet" onclick="showTab('sikayet')">🚩 Şikâyetler</button>
     <button id="t-kullanici" onclick="showTab('kullanici')">👥 Kullanıcılar</button>
     <button id="t-icerik" onclick="showTab('icerik')">📋 İçerik</button>
+    <button id="t-lig" onclick="showTab('lig')">🏆 Ligler</button>
     <button id="t-ayarlar" onclick="showTab('ayarlar')">⚙️ Ayarlar</button>
   </nav>
   <main>
@@ -133,6 +137,34 @@
       <div id="eventList"></div>
       <h3 class="sec">🎯 Keşfet gönderileri (son 30)</h3>
       <div id="postList"></div>
+    </section>
+    <section id="p-lig" class="hide">
+      <h3 class="sec">🏆 Lig Vitrini — yeni ilan</h3>
+      <div class="item" id="ligForm">
+        <div class="meta" style="margin-bottom:8px">İlan, seçilen ildeki oyuncuların ana akışında "LİG İLANI" etiketiyle görünür (il boşsa tüm Türkiye). "Başvur" butonu WhatsApp numarasına hazır mesajla açılır.</div>
+        <div class="ligGrid">
+          <input id="lg-baslik" placeholder="Lig / turnuva adı *" maxlength="60">
+          <select id="lg-il"><option value="">İl: Tüm Türkiye</option></select>
+          <input id="lg-ilce" placeholder="İlçe (isteğe bağlı, il seçince yazın)">
+          <select id="lg-cat"><option value="1">⚽ Halı saha</option><option value="2">🏀 Basketbol</option><option value="3">🏐 Voleybol</option><option value="4">🎾 Tenis</option></select>
+          <input id="lg-tarih" type="date" title="Başlangıç tarihi">
+          <input id="lg-bitis" type="date" title="İlanın yayından kalkacağı tarih">
+          <input id="lg-ucret" placeholder="Takım ücreti (ör. 12.000 TL / sezon)" maxlength="40">
+          <input id="lg-kont" type="number" min="0" placeholder="Kalan takım kontenjanı">
+          <input id="lg-tel" placeholder="WhatsApp numarası (905xxxxxxxxx) *" inputmode="tel">
+          <input id="lg-link" placeholder="Detay linki (https://… isteğe bağlı)">
+          <input id="lg-oncelik" type="number" min="1" max="99" value="5" title="Öncelik (küçük = üstte)">
+          <label class="meta" style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="lg-odendi"> Ödendi</label>
+        </div>
+        <textarea id="lg-aciklama" placeholder="Kısa açıklama (en çok 400 karakter)" maxlength="400" style="width:100%;margin-top:8px;min-height:70px"></textarea>
+        <div class="row" style="align-items:center;margin-top:8px">
+          <label class="meta">Afiş: <input type="file" id="lg-afis" accept="image/*"></label>
+          <span id="lg-afis-durum" class="meta"></span>
+        </div>
+        <div class="row"><button class="b-tur" onclick="ligKaydet()">➕ İlanı yayınla</button></div>
+      </div>
+      <h3 class="sec">Yayındaki ve geçmiş ilanlar</h3>
+      <div id="ligList"><div class="empty">Yükleniyor…</div></div>
     </section>
     <section id="p-ayarlar" class="hide">
       <h3 class="sec">👑 Yöneticiler</h3>
@@ -218,7 +250,7 @@ async function gate(){
 
 /* ---------- sekmeler ---------- */
 function showTab(t){
-  for (const k of ["ozet","sikayet","kullanici","icerik","ayarlar"]) {
+  for (const k of ["ozet","sikayet","kullanici","icerik","lig","ayarlar"]) {
     $("p-"+k).classList.toggle("hide", k!==t);
     $("t-"+k).classList.toggle("on", k===t);
   }
@@ -226,6 +258,7 @@ function showTab(t){
   if (t==="sikayet") loadReports();
   if (t==="kullanici") loadUsers();
   if (t==="icerik") loadContent();
+  if (t==="lig") loadLeagues();
   if (t==="ayarlar") loadSettings();
 }
 
@@ -351,6 +384,86 @@ function actResetPass(id, name){
   if (!confirm(`🔑 ${name} için geçici şifre: ${gecici}\n\nKullanıcıya WhatsApp/telefonla ilet; girince Ayarlar → Şifre değiştir'den kendi şifresini belirlesin. Devam?`)) return;
   run("admin_reset_password", { p_user: id, p_new: gecici }, `Geçici şifre: ${gecici} (kullanıcıya ilet)`, refreshCurrent);
   try { navigator.clipboard.writeText(gecici); } catch {}
+}
+
+/* ---------- LİG VİTRİNİ ---------- */
+let CITIES = null;
+async function ligIller(){
+  if (CITIES) return CITIES;
+  const { data } = await db.from("cities").select("id, name").order("name");
+  CITIES = data || [];
+  const sel = $("lg-il");
+  CITIES.forEach(c => { const o = document.createElement("option"); o.value = c.id; o.textContent = c.name; sel.appendChild(o); });
+  return CITIES;
+}
+async function ligIlceId(cityId, ad){
+  if (!cityId || !ad) return null;
+  const { data } = await db.from("districts").select("id").eq("city_id", cityId).ilike("name", ad.trim()).maybeSingle();
+  return data ? data.id : null;
+}
+async function ligAfisYukle(file){
+  const { data: { user } } = await db.auth.getUser();
+  const path = `${user.id}/lig-${Date.now()}.jpg`;
+  const { error } = await db.storage.from("posts").upload(path, file, { contentType: file.type || "image/jpeg", upsert: true });
+  if (error) throw error;
+  return db.storage.from("posts").getPublicUrl(path).data.publicUrl;
+}
+async function ligKaydet(){
+  const baslik = $("lg-baslik").value.trim(), tel = $("lg-tel").value.replace(/\D/g,"");
+  if (baslik.length < 3) return toast("Lig adı gerekli.");
+  if (tel.length < 12) return toast("WhatsApp numarası 905xxxxxxxxx biçiminde olmalı.");
+  const cityId = $("lg-il").value ? Number($("lg-il").value) : null;
+  const districtId = await ligIlceId(cityId, $("lg-ilce").value);
+  if ($("lg-ilce").value.trim() && !districtId) return toast("İlçe bulunamadı; adı il listesindeki gibi yazın ya da boş bırakın.");
+  let afis = null;
+  const f = $("lg-afis").files[0];
+  if (f) { $("lg-afis-durum").textContent = "Afiş yükleniyor…"; try { afis = await ligAfisYukle(f); } catch(e){ return toast("Afiş yüklenemedi: " + e.message); } }
+  const { data: { user } } = await db.auth.getUser();
+  const kayit = {
+    baslik, aciklama: $("lg-aciklama").value.trim() || null, afis_url: afis, city_id: cityId, district_id: districtId,
+    cat: Number($("lg-cat").value), baslangic: $("lg-tarih").value || null, bitis: $("lg-bitis").value || null,
+    takim_ucreti: $("lg-ucret").value.trim() || null, kontenjan: $("lg-kont").value ? Number($("lg-kont").value) : null,
+    iletisim_tel: tel, link: $("lg-link").value.trim() || null, oncelik: Number($("lg-oncelik").value) || 5,
+    odendi: $("lg-odendi").checked, created_by: user.id,
+  };
+  const { error } = await db.from("lig_ilanlari").insert(kayit);
+  if (error) return toast("Kaydedilemedi: " + error.message);
+  toast("İlan yayında."); ["lg-baslik","lg-ilce","lg-ucret","lg-kont","lg-tel","lg-link","lg-aciklama","lg-tarih","lg-bitis"].forEach(id => $(id).value = "");
+  $("lg-afis").value = ""; $("lg-afis-durum").textContent = ""; $("lg-odendi").checked = false; loadLeagues();
+}
+async function loadLeagues(){
+  await ligIller();
+  $("ligList").innerHTML = '<div class="empty">Yükleniyor…</div>';
+  const { data, error } = await db.from("lig_ilanlari")
+    .select("id, baslik, aktif, odendi, oncelik, bitis, baslangic, kontenjan, goster, tikla, basvuru, created_at, cities(name), districts(name)")
+    .order("aktif", { ascending:false }).order("oncelik").order("created_at", { ascending:false });
+  if (error) return $("ligList").innerHTML = `<div class="empty">Hata: ${esc(error.message)} — SQL yaması (lig-vitrini.sql) çalıştırıldı mı?</div>`;
+  if (!data.length) return $("ligList").innerHTML = '<div class="empty">Henüz ilan yok.</div>';
+  $("ligList").innerHTML = data.map(l => `
+    <div class="item">
+      <h4>${esc(l.baslik)} ${l.aktif ? '<span class="badge s-aktif">yayında</span>' : '<span class="badge s-askida">kapalı</span>'} ${l.odendi ? '💰' : ''}</h4>
+      <div class="meta">${esc(l.cities ? l.cities.name : "Tüm Türkiye")}${l.districts ? " / " + esc(l.districts.name) : ""} · öncelik ${l.oncelik}${l.baslangic ? " · başlangıç " + l.baslangic : ""}${l.bitis ? " · bitiş " + l.bitis : ""}</div>
+      <div class="meta"><span class="ligStat">👁 ${l.goster} gösterim</span><span class="ligStat">👆 ${l.tikla} tıklama</span><span class="ligStat">📨 ${l.basvuru} başvuru</span></div>
+      <div class="row">
+        <button class="b-tur" onclick="ligBasvurular('${l.id}','${esc(l.baslik)}')">📨 Başvuruları gör</button>
+        <button class="b-sar" onclick="ligGuncelle('${l.id}',{aktif:${!l.aktif}})">${l.aktif ? "⏸ Yayından kaldır" : "▶️ Yayına al"}</button>
+        <button class="b-sar" onclick="ligGuncelle('${l.id}',{odendi:${!l.odendi}})">${l.odendi ? "Ödenmedi yap" : "💰 Ödendi işaretle"}</button>
+        <button class="b-sar" onclick="ligOncelik('${l.id}',${l.oncelik})">🔢 Öncelik</button>
+        <button class="b-kir" onclick="ligSil('${l.id}','${esc(l.baslik)}')">🗑 Sil</button>
+      </div>
+      <div id="bv-${l.id}"></div>
+    </div>`).join("");
+}
+async function ligGuncelle(id, patch){ const { error } = await db.from("lig_ilanlari").update(patch).eq("id", id); if (error) return toast("Hata: " + error.message); loadLeagues(); }
+function ligOncelik(id, cur){ const v = prompt("Öncelik (1 = en üstte):", cur); if (v === null) return; ligGuncelle(id, { oncelik: Number(v) || 5 }); }
+async function ligSil(id, ad){ if (!confirm(`"${ad}" ilanı ve başvuruları silinecek. Emin misin?`)) return; const { error } = await db.from("lig_ilanlari").delete().eq("id", id); if (error) return toast("Hata: " + error.message); toast("Silindi."); loadLeagues(); }
+async function ligBasvurular(id, ad){
+  const kutu = $("bv-" + id); kutu.innerHTML = '<div class="meta">Yükleniyor…</div>';
+  const { data, error } = await db.rpc("lig_basvuru_listesi", { p_id: id });
+  if (error) return kutu.innerHTML = `<div class="meta">Hata: ${esc(error.message)}</div>`;
+  if (!data.length) return kutu.innerHTML = '<div class="meta">Henüz başvuru yok.</div>';
+  kutu.innerHTML = `<div class="meta" style="margin-top:6px"><b>${esc(ad)} — ${data.length} başvuru</b></div>` + data.map(b => `
+    <div class="meta">${b.tur === "takim" ? "🛡️" : "🙋"} ${esc(b.ad)} (@${esc(b.kullanici)}) · ${b.telefon ? `<a href="https://wa.me/${esc(String(b.telefon).replace(/\D/g,""))}" target="_blank">+${esc(b.telefon)}</a>` : "—"}${b.takim_adi ? " · takım: " + esc(b.takim_adi) : ""} · ${fmtD(b.tarih)}</div>`).join("");
 }
 
 /* ---------- eylemler ---------- */
