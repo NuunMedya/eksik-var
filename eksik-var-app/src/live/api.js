@@ -3,6 +3,7 @@
 import { supabase } from "../supabase";
 import { PLAKA } from "../trIlIlce";
 import { fmtEventDate, toDateISO } from "../data";
+import { sikistir, BOYUT } from "../sikistir";
 
 /* ---------- eşleme yardımcıları ---------- */
 const LEVEL_TO_UI = { farketmez: "Farketmez", baslangic: "Başlangıç", orta: "Orta", ileri: "İleri" };
@@ -255,7 +256,7 @@ export async function uploadAvatar(uid, uri) {
     return null;
   }
   const path = `${uid}/avatar-${Date.now()}.jpg`;
-  const yanit = await fetch(uri);
+  const yanit = await fetch(await sikistir(uri, BOYUT.avatar, 0.8));
   const blob = await yanit.blob();
   const { error } = await supabase.storage.from("avatars").upload(path, blob, { contentType: blob.type || "image/jpeg", upsert: true });
   if (error) throw error;
@@ -429,7 +430,7 @@ export async function teamMembers(teamId) {
     avatar: r.users && r.users.avatar_url, rating: Number(r.users && r.users.rating_avg) || 0 }));
 }
 export async function uploadTeamLogo(meId, teamId, uri) {
-  const blob = await (await fetch(uri)).blob();
+  const blob = await (await fetch(await sikistir(uri, BOYUT.logo, 0.85))).blob();
   const path = `${meId}/takim_${teamId}.jpg`;
   const { error } = await supabase.storage.from("avatars").upload(path, blob, { contentType: blob.type || "image/jpeg", upsert: true });
   if (error) throw error;
@@ -574,7 +575,7 @@ export async function createPost(meId, user, { caption, imageUri, videoUri, atta
   let image_url = null, video_url = null;
   if (imageUri) {
     const path = `${meId}/post-${Date.now()}.jpg`;
-    const blob = await (await fetch(imageUri)).blob();
+    const blob = await (await fetch(await sikistir(imageUri, BOYUT.gonderi))).blob();
     const { error: e1 } = await supabase.storage.from("posts").upload(path, blob, { contentType: blob.type || "image/jpeg", upsert: true });
     if (e1) throw e1;
     image_url = supabase.storage.from("posts").getPublicUrl(path).data.publicUrl;
@@ -999,7 +1000,7 @@ export async function setGuestRecord(eventId, guestId, patch) {
 export async function pinMessage(conversationId, messageDbId) { const { error } = await supabase.rpc("pin_message", { p_conversation: conversationId, p_message: messageDbId }); if (error) throw error; }
 export async function sendImage(meId, conversationId, uri) {
   const path = `${meId}/${Date.now()}.jpg`;
-  const blob = await (await fetch(uri)).blob();
+  const blob = await (await fetch(await sikistir(uri, BOYUT.sohbet))).blob();
   const { error: e1 } = await supabase.storage.from("chat").upload(path, blob, { contentType: blob.type || "image/jpeg", upsert: true });
   if (e1) throw e1;
   const url = supabase.storage.from("chat").getPublicUrl(path).data.publicUrl;
