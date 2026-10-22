@@ -886,15 +886,15 @@ export default function LiveApp() {
   useEffect(() => { if (meId && user) { refreshOffers(); api.myTeam(meId).then(setMyTeamRow).catch(() => {}); } }, [meId]);
   useEffect(() => { if (meId) api.listSponsors().then((x) => { if (x.length) setSponsors(x); }).catch(() => { /* tablo yoksa varsayılan */ }); }, [meId]);
   useEffect(() => {
-    if (!meId || !user) return;
-    api.listLeagues(user.cityId).then((ls) => { setLeagues(ls); if (ls.length) api.leagueSeen(ls.map((l) => l.id)).catch(() => {}); }).catch(() => setLeagues([]));
-  }, [meId, user && user.cityId]);
+    if (!meId || !me) return;
+    api.listLeagues(me.cityId || null).then((ls) => { setLeagues(ls); if (ls.length) api.leagueSeen(ls.map((l) => l.id)).catch(() => {}); }).catch(() => setLeagues([]));
+  }, [meId, me && me.cityId]);
   const ligBasvur = (lig) => {
     const gonder = async (tur) => {
       try { await api.leagueApply(lig.id, { tur, takim: tur === "takim" ? (myTeamRow && myTeamRow.name) || null : null }); } catch { /* sayaç; akışı kesme */ }
       api.leagueClick(lig.id).catch(() => {});
       const kim = tur === "takim" ? `${(myTeamRow && myTeamRow.name) ? myTeamRow.name + " takımı" : "Takımımız"} ile` : "Takımım yok, oyuncu olarak";
-      const msg = `Merhaba, Eksik Var'da "${lig.baslik}" ilanınızı gördüm. ${kim} lige katılmak istiyorum. (${user.name})`;
+      const msg = `Merhaba, Eksik Var'da "${lig.baslik}" ilanınızı gördüm. ${kim} lige katılmak istiyorum. (${me.name})`;
       if (lig.tel) Linking.openURL(`https://wa.me/${String(lig.tel).replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`).catch(() => showToast(t("WhatsApp açılamadı")));
       else if (lig.link) Linking.openURL(lig.link).catch(() => {});
       else showToast(t("Başvurun iletildi, organizatör seninle iletişime geçecek"));
