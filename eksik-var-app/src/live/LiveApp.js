@@ -12,6 +12,7 @@ import { contactRules, DEFAULT_SETTINGS, buildShareText, buildInviteText, buildT
 import { useDeepLink } from "../deeplink";
 import { copyText } from "../clipboard";
 import { pickPhoto } from "../avatar";
+import OdemeSheet from "../screens/OdemeSheet";
 import { addToCalendar } from "../calendar";
 import { Linking, Modal, ScrollView, TextInput, KeyboardAvoidingView, Platform } from "react-native";
 import { t, onLangChange } from "../i18n";
@@ -769,6 +770,12 @@ export default function LiveApp() {
     return people;
   };
   const claimPayment = async (eventId) => { try { await api.claimPayment(eventId); await refreshEvents(); showToast(t("Organizatöre bildirildi")); } catch (e) { fail(e); } };
+  const [odemeEv, setOdemeEv] = useState(null);
+  const odemeOnayla = async (eventId, dekontUri) => {
+    try { await api.claimPaymentWithProof(meId, eventId, dekontUri); await refreshEvents(); showToast(dekontUri ? t("Ödemen ve dekontun organizatöre iletildi") : t("Organizatöre bildirildi")); }
+    catch (e) { fail(e); }
+  };
+  const dekontAc = (url) => Linking.openURL(url).catch(() => showToast(t("Dekont açılamadı")));
   /* --- gol/asist, sezon, yoklama kodu --- */
   const [checkinCodes, setCheckinCodes] = useState({});
   const [seasons, setSeasons] = useState({});
@@ -1039,6 +1046,7 @@ export default function LiveApp() {
                 availability={availabilityFor(activeEvent)} onAskAvailability={askAvailability} onApplySuggested={applySuggested} onAnswer={answerAvailability}
                 onRecordScore={recordScore} myMvpVote={mvpVotes[activeEvent.id] || null}
                 onClaimPayment={claimPayment} onConfirmPayment={confirmPayment} onSendIban={sendIban} onRemindPayments={remindPayments} onCopyIban={copyIbanFor}
+                onPay={(ev) => setOdemeEv(ev)} onOpenProof={dekontAc}
                 paymentDetails={paymentDetails} onSaveIban={saveIban}
                 onCalendar={calendarFor} onDirections={directionsFor} onAddGuest={addGuest} onUpdateNeeds={async (id, needs) => { try { await api.updateEventNeeds(id, needs); await refreshEvents(); showToast(t("İhtiyaç güncellendi \u2713")); } catch (e) { fail(e); } }}
                 onStopSeries={async (id) => { try { await api.stopSeries(id); await refreshEvents(); showToast(t("Seri durduruldu — bu hafta son \u23F9")); } catch (e) { fail(e); } }}
@@ -1326,6 +1334,9 @@ export default function LiveApp() {
           )}
           <PostComposer visible={composer} onClose={() => setComposer(false)} busy={postBusy}
             hasListing={!!(myListing && myListing.active)} onShare={sharePost} />
+          <OdemeSheet visible={!!odemeEv} ev={odemeEv} amount={odemeEv && odemeEv.myPayment ? odemeEv.myPayment.amount : 0}
+            onClose={() => setOdemeEv(null)} loadIban={api.organizerIban}
+            onCopy={(v) => copyText(v)} onPickProof={pickPhoto} onClaim={odemeOnayla} />
           <Toast text={toast} />
 
           {!hideTabs && (

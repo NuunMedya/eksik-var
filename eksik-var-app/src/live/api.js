@@ -337,7 +337,7 @@ export async function listEvents(meId, cityId) {
   }
   const payments = {};
   const { data: pays } = await supabase.from("v_event_payments").select("*").in("event_id", ids);
-  (pays || []).forEach((p) => { (payments[p.event_id] = payments[p.event_id] || []).push({ id: p.user_id, name: p.full_name, avatar: p.avatar_url, amount: Number(p.amount), status: p.status }); });
+  (pays || []).forEach((p) => { (payments[p.event_id] = payments[p.event_id] || []).push({ id: p.user_id, name: p.full_name, avatar: p.avatar_url, amount: Number(p.amount), status: p.status, proof: p.proof_url || null, claimedAt: p.claimed_at || null }); });
   const checkedIns = {};
   const mineIds = [...byId.values()].filter((e) => e.organizer_id === meId).map((e) => e.id);
   if (mineIds.length) {
@@ -982,6 +982,26 @@ export async function myMvpVotes(meId) {
 
 /* ---------- ödeme takibi ---------- */
 export async function claimPayment(eventId) { const { error } = await supabase.rpc("claim_payment", { p_event: eventId }); if (error) throw error; }
+// Dekontlu "ödedim": fotoğraf sıkıştırılıp chat kovasına yüklenir, ardından iddia + dekont yazılır
+export async function claimPaymentWithProof(meId, eventId, uri) {
+  let url = null;
+  if (uri) {
+    const path = `${meId}/dekont-${eventId}-${Date.now()}.jpg`;
+    const blob = await (await fetch(await sikistir(uri, 1280, 0.7))).blob();
+    const { error: e1 } = await supabase.storage.from("chat").upload(path, blob, { contentType: blob.type || "image/jpeg", upsert: true });
+    if (e1) throw e1;
+    url = supabase.storage.from("chat").getPublicUrl(path).data.publicUrl;
+  }
+  const { error } = await supabase.rpc("claim_payment_proof", { p_event: eventId, p_url: url });
+  if (error) throw error;
+}
+// Katılımcı için organizatörün IBAN'ı (RPC yetkiyi sunucuda denetler)
+export async function organizerIban(eventId) {
+  const { data, error } = await supabase.rpc("organizer_iban", { p_event: eventId });
+  if (error) throw error;
+  const r = Array.isArray(data) ? data[0] : data;
+  return r ? { iban: r.iban || null, holder: r.holder || null, organizerName: r.organizer_name || null } : null;
+}
 export async function confirmPayment(eventId, userId, status) {
   if (String(userId).startsWith("g:")) { await setGuestRecord(eventId, String(userId).slice(2), { payment_status: status }); return; }
   const { error } = await supabase.rpc("confirm_payment", { p_event: eventId, p_user: userId, p_status: status }); if (error) throw error;

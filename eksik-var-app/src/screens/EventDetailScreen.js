@@ -13,7 +13,7 @@ export default function EventDetailScreen({ onPinVenue = null, onUpdateDesc = nu
   onAcceptInvite = () => {}, onDeclineInvite = () => {}, onJoinWaitlist = () => {}, onLeaveWaitlist = () => {},
   availability = null, onAskAvailability = () => {}, onApplySuggested = () => {}, onAnswer = () => {},
   onRecordScore = () => {}, myMvpVote = null,
-  onClaimPayment = () => {}, onConfirmPayment = () => {}, onSendIban = () => {}, onRemindPayments = () => {}, onCopyIban = () => {},
+  onClaimPayment = () => {}, onConfirmPayment = () => {}, onSendIban = () => {}, onRemindPayments = () => {}, onCopyIban = () => {}, onPay = null, onOpenProof = () => {},
   onCalendar = () => {}, onDirections = () => {}, onAddGuest = () => {}, onAddGuests = null, onRemoveGuest = () => {}, onToggleGuest = () => {},
   onCheckIn = () => {}, disputes = [], onFixAttendance = () => {}, onConfirmAllPayments = () => {},
   statRoster = [], onSetStat = () => {}, onShareSummary = () => {}, checkinCode = null, onOpenCode = () => {}, onCheckInWithCode = () => {},
@@ -432,6 +432,11 @@ export default function EventDetailScreen({ onPinVenue = null, onUpdateDesc = nu
                       <Text style={{ fontWeight: "800", fontSize: 13, color: C.ink }}>{p.name}</Text>
                       <Text style={{ fontSize: 11, color: p.status === "odedim" ? C.kit : C.faint }}>{p.amount}₺ · {t(PAYMENT_LABEL[p.status])}</Text>
                     </View>
+                    {p.proof ? (
+                      <TouchableOpacity onPress={() => onOpenProof(p.proof)} style={{ marginRight: 6, flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: C.pitchSoft, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 }}>
+                        <Ionicons name="receipt-outline" size={12} color={C.pitch} /><Text style={{ fontSize: 10.5, fontWeight: "800", color: C.pitch }}>{t("Dekont")}</Text>
+                      </TouchableOpacity>
+                    ) : null}
                     {p.status === "odendi" || p.status === "muaf" ? (
                       <TouchableOpacity onPress={() => onConfirmPayment(ev.id, p.id, "bekliyor")} style={[st.payBtn, { backgroundColor: C.pitchSoft }]}>
                         <Text style={{ fontSize: 11, fontWeight: "800", color: C.turfText }}>{p.status === "muaf" ? "Muaf" : "✓ Ödendi"}</Text>
@@ -455,14 +460,21 @@ export default function EventDetailScreen({ onPinVenue = null, onUpdateDesc = nu
                   {t("Saha ücretin:")} <Text style={{ fontWeight: "900" }}>{ev.myPayment.amount}₺</Text> · <Text style={{ fontWeight: "800", color: ev.myPayment.status === "odendi" ? C.pitch : ev.myPayment.status === "odedim" ? C.kit : C.faint }}>{t(PAYMENT_LABEL[ev.myPayment.status])}</Text>
                 </Text>
                 {ev.myPayment.status === "bekliyor" && (
-                  <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
-                    <TouchableOpacity onPress={() => onCopyIban(ev.id)} style={[st.cta, st.btnGhost, { flex: 1, flexDirection: "row", justifyContent: "center", gap: 6 }]}>
-                      <Ionicons name="copy-outline" size={15} color={C.turfText} /><Text style={[st.ctaText, { color: C.turfText }]}>{t("IBAN'ı kopyala")}</Text>
+                  onPay ? (
+                    <TouchableOpacity onPress={() => onPay(ev)} activeOpacity={0.9} style={[st.cta, { backgroundColor: C.pitch, marginTop: 10, flexDirection: "row", justifyContent: "center", gap: 8 }]}>
+                      <Ionicons name="flash-outline" size={16} color="#fff" />
+                      <Text style={st.ctaText}>{t("Payını öde")} · {ev.myPayment.amount}₺</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => onClaimPayment(ev.id)} style={[st.cta, { backgroundColor: C.turf, flex: 1 }]}>
-                      <Text style={st.ctaText}>{t("Ödedim")}</Text>
-                    </TouchableOpacity>
-                  </View>
+                  ) : (
+                    <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+                      <TouchableOpacity onPress={() => onCopyIban(ev.id)} style={[st.cta, st.btnGhost, { flex: 1, flexDirection: "row", justifyContent: "center", gap: 6 }]}>
+                        <Ionicons name="copy-outline" size={15} color={C.turfText} /><Text style={[st.ctaText, { color: C.turfText }]}>{t("IBAN'ı kopyala")}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => onClaimPayment(ev.id)} style={[st.cta, { backgroundColor: C.turf, flex: 1 }]}>
+                        <Text style={st.ctaText}>{t("Ödedim")}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )
                 )}
                 {ev.myPayment.status === "odedim" && <Text style={{ fontSize: 12, color: C.faint, marginTop: 6 }}>{t("Organizatör onaylayınca \"Ödendi\" olur.")}</Text>}
               </View>
