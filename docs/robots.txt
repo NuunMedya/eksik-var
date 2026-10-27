@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Disallow: /yonetim.html
+Sitemap: https://eksikvarapp.com/sitemap.xml

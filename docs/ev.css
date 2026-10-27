@@ -1,0 +1,63 @@
+/* Eksik Var — herkese açık sayfalar (maç, şehir, ilçe) */
+:root{--saha:#123B26;--cim:#17994F;--kirec:#F1EFE6;--forma:#E8641B;--murekkep:#10231A;--sis:#9DBBAA;--faint:#5E6E66;--line:#E3E0D6;--mor:#5B3FD6;--morSoft:#EEE9FD}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Archivo',-apple-system,system-ui,Segoe UI,Roboto,sans-serif;background:var(--kirec);color:var(--murekkep);line-height:1.5;min-height:100vh}
+a{color:inherit}
+.ust{background:var(--saha);color:var(--kirec);padding:14px 20px}
+.ust-ic{max-width:760px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.marka{font-weight:900;font-style:italic;font-size:1.3rem;letter-spacing:-.02em;color:var(--kirec);text-decoration:none}
+.marka em{color:var(--forma)}
+.ust .indir{background:var(--forma);color:#fff;text-decoration:none;font-weight:800;padding:9px 16px;border-radius:999px;font-size:.9rem;white-space:nowrap}
+.hero{background:var(--saha);color:var(--kirec);padding:22px 20px 34px}
+.hero-ic{max-width:760px;margin:0 auto}
+.kirinti{font-size:.85rem;color:var(--sis)}.kirinti a{color:var(--sis);text-decoration:none}.kirinti a:hover{text-decoration:underline}
+.hero h1{font-size:clamp(1.5rem,5vw,2.3rem);line-height:1.15;letter-spacing:-.02em;margin-top:8px;font-weight:900}
+.hero h1 em{color:var(--forma);font-style:italic}
+.hero p{color:var(--sis);margin-top:8px;max-width:560px}
+.ist{margin-top:14px;font-size:.9rem;color:var(--sis)}.ist b{color:var(--kirec)}
+.govde{max-width:760px;margin:-18px auto 0;padding:0 16px 48px}
+.liste{background:#fff;border-radius:20px;padding:8px;box-shadow:0 12px 40px rgba(0,0,0,.08)}
+.say{font-size:.8rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);padding:10px 12px 4px}
+.yuk{padding:28px;text-align:center;color:var(--faint)}
+.ev{display:flex;gap:12px;align-items:center;padding:12px;border-radius:14px;text-decoration:none;border-bottom:1px solid var(--line)}
+.ev:last-child{border-bottom:0}.ev:hover{background:#FAF9F4}
+.ev-ico{width:46px;height:46px;border-radius:14px;background:var(--kirec);display:flex;align-items:center;justify-content:center;font-size:22px;flex:none}
+.ev-body{flex:1;min-width:0}
+.ev-title{font-weight:800;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev-sub{font-size:.85rem;color:var(--faint);margin-top:2px}
+.ev-pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.pill{font-size:.75rem;font-weight:800;padding:4px 9px;border-radius:999px;background:var(--kirec);color:var(--murekkep)}
+.pill.hot{background:#FDE9DC;color:#B4480E}.pill.ok{background:#E3F4EA;color:#0F7A3C}.pill.mor{background:var(--morSoft);color:var(--mor)}
+.ev-go{color:var(--faint);font-size:22px;padding:0 4px}
+.bos{padding:34px 20px;text-align:center}
+.bos-ico{font-size:34px}.bos-t{font-weight:800;margin-top:8px}.bos-s{color:var(--faint);font-size:.9rem;margin-top:6px;max-width:400px;margin-left:auto;margin-right:auto}
+.cta{margin-top:22px;background:var(--saha);color:var(--kirec);border-radius:20px;padding:22px 20px;text-align:center}
+.cta h2{font-size:1.25rem;font-weight:900;letter-spacing:-.01em}.cta p{color:var(--sis);margin-top:6px;font-size:.95rem}
+.btn{display:block;width:100%;padding:14px;border-radius:14px;font-weight:800;font-size:.98rem;text-decoration:none;margin-top:10px;text-align:center;border:0;cursor:pointer}
+.b1{background:var(--cim);color:#fff}.b2{background:#fff;color:var(--saha);border:1px solid var(--line)}
+.cta .b2{background:rgba(255,255,255,.1);color:var(--kirec);border-color:rgba(255,255,255,.2)}
+.ilceler{margin-top:26px}
+.ilceler h2{font-size:1rem;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin-bottom:10px}
+.ilce-liste{display:flex;flex-wrap:wrap;gap:8px}
+.ilce-liste a{text-decoration:none;background:#fff;border:1px solid var(--line);padding:8px 13px;border-radius:999px;font-size:.9rem;font-weight:700}
+.ilce-liste a:hover{border-color:var(--cim);color:var(--cim)}
+.sss{margin-top:30px}
+.sss h2{font-size:1.1rem;font-weight:900;margin-bottom:10px}
+.sss details{background:#fff;border-radius:14px;padding:12px 16px;margin-bottom:8px;border:1px solid var(--line)}
+.sss summary{font-weight:800;cursor:pointer}.sss p{color:var(--faint);font-size:.93rem;margin-top:8px}
+.alt{max-width:760px;margin:0 auto;padding:18px 16px 40px;font-size:.82rem;color:var(--faint);display:flex;flex-wrap:wrap;gap:14px}
+.alt a{color:var(--faint)}
+/* maç sayfası */
+.kart{background:#fff;border-radius:24px;padding:24px 20px;max-width:480px;margin:0 auto;box-shadow:0 20px 60px rgba(0,0,0,.12)}
+.ev-hero{display:flex;gap:14px;align-items:center}
+.ev-hero-ico{width:56px;height:56px;border-radius:18px;background:var(--kirec);display:flex;align-items:center;justify-content:center;font-size:28px;flex:none}
+.ev-hero-k{font-size:.78rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.ev-hero-t{font-size:1.35rem;font-weight:900;line-height:1.2;letter-spacing:-.01em}
+.uyari{background:#FDE9DC;color:#B4480E;font-weight:800;border-radius:12px;padding:10px 12px;margin-top:14px;font-size:.9rem}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
+.g{background:var(--kirec);border-radius:14px;padding:10px 12px}
+.g-k{font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.g-v{font-weight:800;margin-top:3px;font-size:.95rem}.g-v small{font-weight:600;color:var(--faint)}.g-v .hot{color:#B4480E}
+.ev-cta-t{text-align:center;font-weight:900;font-size:1.05rem;margin-top:18px}
+.meta{font-size:.8rem;color:var(--faint);margin-top:14px;text-align:center;line-height:1.5}
+.kart h1{font-size:1.3rem;font-weight:900}.kart p{color:var(--faint);margin-top:8px;font-size:.95rem}
