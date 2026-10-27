@@ -11,7 +11,7 @@ print("2) Giriş yapmadan (anon) maç sayfası verisi")
 s,e=req("POST","/rest/v1/rpc/public_event",{"p_id":evId})
 check(f"public_event cevap verdi ({s})", s==200 and e and e.get("id")==evId)
 check("başlık, saha, ücret, eksik, hakem bayrağı var", e and e["title"]=="Açık Sayfa Testi" and e["price"]==120 and e["needed"]==2 and e["hakem"] is True and e["city"]=="Ankara")
-check("organizatör adı kısaltılmış (Açık S.)", e and e["org"]=="Açık S.")
+check("organizatör adı kısaltılmış (Açık O.)", e and e["org"]=="Açık O.")
 check("açıklama / telefon / organizatör id sızmıyor", e and "description" not in e and "0555" not in json.dumps(e, ensure_ascii=False) and oId not in json.dumps(e))
 
 print("3) Şehir / ilçe akışı (anon)")
