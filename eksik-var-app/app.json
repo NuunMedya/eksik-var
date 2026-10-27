@@ -23,7 +23,10 @@
     "plugins": [
       "expo-status-bar",
       "expo-audio",
-      "expo-sharing"
+      "expo-sharing",
+      "expo-video",
+      "expo-font",
+      "expo-asset"
     ]
   }
 }
