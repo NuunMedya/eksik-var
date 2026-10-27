@@ -7,11 +7,15 @@ grant insert (total_cost) on public.events to authenticated;
 grant update (total_cost) on public.events to authenticated;
 
 -- 2) Paylaşım tabanı: uygulamadaki katılımcılar (muaf hariç) + uygulamaya girmemiş sabit ekip
+-- uygulamadaki katılımcılar (muaf hariç) + isimli misafirler (muaf ve "yok" diyenler hariç);
+-- isimli misafir hiç yoksa ilandaki "sabit ekip" sayısı kullanılır — ikisi asla birlikte sayılmaz
 create or replace function public.odeyen_sayisi(p_event uuid) returns int
 language sql stable security definer set search_path = public as $$
-  select greatest(1,
-    (select count(*) from public.participants where event_id = p_event and payment_status <> 'muaf')::int
-    + coalesce((select offline_regulars from public.events where id = p_event), 0))
+  with k as (select count(*)::int n from public.participants where event_id = p_event and payment_status <> 'muaf'),
+       m as (select count(*)::int n, count(*) filter (where payment_status <> 'muaf' and available)::int odeyen
+               from public.guest_records where event_id = p_event)
+  select greatest(1, k.n + case when m.n > 0 then m.odeyen else coalesce((select offline_regulars from public.events where id = p_event), 0) end)
+    from k, m
 $$;
 
 -- 3) Organizatör: "gelenlere göre yeniden böl" → kişi başı güncellenir, ödemesi bekleyenlere bildirim
