@@ -5,9 +5,12 @@ import ErrorBoundary from "./src/ErrorBoundary";
 import { isLive } from "./src/config";
 import DemoApp from "./src/DemoApp";
 import LiveApp from "./src/live/LiveApp";
+import { izlemeBaslat, sentryWrap } from "./src/izleme";
+
+izlemeBaslat();
 
 // src/config.js doluysa Supabase ile (canlı), boşsa örnek verilerle (demo) çalışır
-export default function App() {
+function App() {
   const [ready, setReady] = useState(false);
   useEffect(() => { loadPrefs().finally(() => setReady(true)); }, []);
   if (!ready) return null;
@@ -17,3 +20,5 @@ export default function App() {
     </ErrorBoundary>
   );
 }
+
+export default sentryWrap(App);

@@ -54,7 +54,8 @@
       "expo-sharing",
       "expo-video",
       "expo-font",
-      "expo-asset"
+      "expo-asset",
+      "@sentry/react-native"
     ],
     "scheme": "eksikvar"
   }

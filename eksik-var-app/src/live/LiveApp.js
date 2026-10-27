@@ -13,6 +13,7 @@ import { useDeepLink } from "../deeplink";
 import { copyText } from "../clipboard";
 import { pickPhoto } from "../avatar";
 import OdemeSheet from "../screens/OdemeSheet";
+import { olay, kimlik, hata } from "../izleme";
 import { addToCalendar } from "../calendar";
 import { Linking, Modal, ScrollView, TextInput, KeyboardAvoidingView, Platform } from "react-native";
 import { t, onLangChange } from "../i18n";
@@ -379,14 +380,14 @@ export default function LiveApp() {
   useEffect(() => { const a = onThemeChange(() => setUiVersion((v) => v + 1)); const b = onLangChange(() => setUiVersion((v) => v + 1)); return () => { a(); b(); }; }, []);
 
   const showToast = (msg) => { setToast(msg); timers.current.push(setTimeout(() => setToast(null), 3000)); };
-  const fail = (e) => showToast(friendly(e));
+  const fail = (e) => { hata(e); showToast(friendly(e)); };
   const meId = me ? me.id : null;
   const isViewingChat = (chatId) => viewRef.current.name === "chat" && viewRef.current.id === chatId;
 
   /* ---------- oturum ---------- */
   useEffect(() => {
     api.getSession().then(setSession).catch(() => setSession(null));
-    const { data } = api.onAuthChange(setSession);
+    const { data } = api.onAuthChange((s) => { setSession(s); kimlik(s && s.user ? s.user.id : null); });
     return () => data.subscription.unsubscribe();
   }, []);
 
@@ -511,14 +512,15 @@ export default function LiveApp() {
   /* ---------- kimlik (telefon + şifre, SMS'siz) ---------- */
   const handleLogin = async ({ phone, password }) => {
     setAuthError(null); setAuthBusy(true);
-    try { await api.signInPhone({ phone, password }); }
-    catch (e) { setAuthError(friendly(e)); }
+    try { await api.signInPhone({ phone, password }); olay("giris"); }
+    catch (e) { setAuthError(friendly(e)); olay("giris_hata"); }
     finally { setAuthBusy(false); }
   };
   const handleRegister = async (f) => {
     setAuthError(null); setAuthBusy(true);
     try {
       const s = await api.signUpPhone(f);
+      olay("kayit", { tur: f.accountType || "oyuncu", eposta: !!f.email, foto: !!f.avatar });
       if (s && f.avatar) { try { await api.uploadAvatar(s.user.id, f.avatar); } catch { /* sessiz */ } }
       if (s && f.email) showToast(t("E-postana doğrulama kodu gönderdik — Ayarlar → Kurtarma e-postası'ndan doğrula"));
     } catch (e) { setAuthError(friendly(e)); }
@@ -542,7 +544,7 @@ export default function LiveApp() {
   const changePassword = ({ current, next }) => api.changePassword({ phone: session && session.user && session.user.phone ? "+" + String(session.user.phone).replace(/^\+/, "") : "", current, next });
   const changeEmail = async (email) => { await api.changeEmail(meId, email); await refreshEmail(); };
   const verifyEmail = async (email, code) => { await api.verifyEmailCode(meId, email, code); await refreshEmail(); };
-  const logout = async () => { await api.signOut(); setView({ name: "root" }); setTab("home"); };
+  const logout = async () => { olay("cikis"); await api.signOut(); kimlik(null); setView({ name: "root" }); setTab("home"); };
 
   /* ---------- yardımcılar ---------- */
   const groupFor = (ev) => chats.find((c) => c.type === "grup" && (c.eventId === ev.id || (ev.seriesId && c.seriesId === ev.seriesId)));
@@ -567,6 +569,7 @@ export default function LiveApp() {
   const applyToEvent = async (ev, note, position = null) => {
     try {
       const r = await api.applyToEvent(meId, ev.id, note, position);
+      olay("basvuru", { brans: ev.cat, mevki: position || null, ucretli: ev.price > 0 });
       const a = await refreshApps();
       const liste = await api.listChats(meId, a);
       setChats(liste);
@@ -595,6 +598,7 @@ export default function LiveApp() {
     creatingRef.current = true;
     try {
       const id = await api.createEvent(meId, f);
+      olay("ilan_acildi", { brans: Number(f.cat), tur: f.kind || "oyuncu", ucretli: Number(f.price) > 0, toplamdan: !!f.totalCost, haftalik: f.recurrence === "haftalik" });
       if (f.cat && !((me.favCats || []).includes(f.cat))) {
         const yeniBrans = [...(me.favCats || []), f.cat];
         try {
@@ -772,7 +776,7 @@ export default function LiveApp() {
   const claimPayment = async (eventId) => { try { await api.claimPayment(eventId); await refreshEvents(); showToast(t("Organizatöre bildirildi")); } catch (e) { fail(e); } };
   const [odemeEv, setOdemeEv] = useState(null);
   const odemeOnayla = async (eventId, dekontUri) => {
-    try { await api.claimPaymentWithProof(meId, eventId, dekontUri); await refreshEvents(); showToast(dekontUri ? t("Ödemen ve dekontun organizatöre iletildi") : t("Organizatöre bildirildi")); }
+    try { await api.claimPaymentWithProof(meId, eventId, dekontUri); olay("odedim", { dekont: !!dekontUri }); await refreshEvents(); showToast(dekontUri ? t("Ödemen ve dekontun organizatöre iletildi") : t("Organizatöre bildirildi")); }
     catch (e) { fail(e); }
   };
   const dekontAc = (url) => Linking.openURL(url).catch(() => showToast(t("Dekont açılamadı")));
@@ -909,6 +913,7 @@ export default function LiveApp() {
     const gonder = async (tur) => {
       try { await api.leagueApply(lig.id, { tur, takim: tur === "takim" ? (myTeamRow && myTeamRow.name) || null : null }); } catch { /* sayaç; akışı kesme */ }
       api.leagueClick(lig.id).catch(() => {});
+      olay("lig_basvuru", { tur });
       const kim = tur === "takim" ? `${(myTeamRow && myTeamRow.name) ? myTeamRow.name + " takımı" : "Takımımız"} ile` : "Takımım yok, oyuncu olarak";
       const msg = `Merhaba, Eksik Var'da "${lig.baslik}" ilanınızı gördüm. ${kim} lige katılmak istiyorum. (${me.name})`;
       if (lig.tel) Linking.openURL(`https://wa.me/${String(lig.tel).replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`).catch(() => showToast(t("WhatsApp açılamadı")));

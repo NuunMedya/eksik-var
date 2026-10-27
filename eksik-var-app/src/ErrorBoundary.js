@@ -1,4 +1,5 @@
 // Beklenmeyen bir hata olursa kırmızı ekran yerine kibar bir ekran + yeniden başlatma
+import { hata } from "./izleme";
 import React from "react";
 import { View, Text, TouchableOpacity, Image } from "react-native";
 import { t } from "./i18n";
@@ -7,7 +8,8 @@ import { C } from "./theme";
 export default class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null, key: 0 }; }
   static getDerivedStateFromError(error) { return { error }; }
-  componentDidCatch(error, info) { console.warn("Yakalanan hata:", error, info && info.componentStack); }
+  componentDidCatch(error, info) {
+    hata(error, { nerede: "ErrorBoundary" }); console.warn("Yakalanan hata:", error, info && info.componentStack); }
   reset = () => this.setState((s) => ({ error: null, key: s.key + 1 }));
   render() {
     if (this.state.error) {
