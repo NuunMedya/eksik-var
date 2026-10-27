@@ -1,10 +1,9 @@
 -- EKSİK VAR — Push gönderimi + Eksik Alarmı (bir kez, Supabase SQL Editor)
--- 1. bölüm: notifications tablosuna her kayıt → Expo push (kullanıcı tercihi ve sessiz saatlere saygılı)
+-- 1. bölüm: push_izinli(): bildirim türü → kullanıcı tercihi + sessiz saatler (send-push fonksiyonu çağırır)
 -- 2. bölüm: yeni ilan açılınca eşleşen oyunculara "Yakınında eksik var" bildirimi
 set search_path = public;
-create extension if not exists pg_net with schema extensions;
 
--- ---------- 1) PUSH GÖNDERİCİ ----------
+-- ---------- 1) PUSH İZNİ ----------
 -- Bildirim türü → kullanıcının ilgili tercihi (bilinmeyen türler her zaman gider)
 create or replace function public.push_izinli(p_user uuid, p_type text) returns boolean
 language sql stable security definer set search_path = public as $$
@@ -22,27 +21,10 @@ language sql stable security definer set search_path = public as $$
   from public.users u where u.id = p_user
 $$;
 
-create or replace function public.trg_notification_push() returns trigger
-language plpgsql security definer set search_path = public, extensions as $$
-declare tok text;
-begin
-  if not public.push_izinli(new.user_id, new.type) then return new; end if;
-  select push_token into tok from public.users where id = new.user_id;
-  perform net.http_post(
-    url := 'https://exp.host/--/api/v2/push/send',
-    headers := '{"Content-Type":"application/json","Accept":"application/json"}'::jsonb,
-    body := jsonb_build_object(
-      'to', tok, 'title', new.title, 'body', coalesce(new.body, ''), 'sound', 'default',
-      'channelId', 'default', 'priority', 'high',
-      'data', coalesce(new.data, '{}'::jsonb) || jsonb_build_object('type', new.type, 'notifId', new.id)),
-    timeout_milliseconds := 5000);
-  return new;
-exception when others then
-  return new;   -- push başarısız olsa da uygulama içi bildirim yazılır
-end $$;
+-- Push'u gönderen: notifications tablosuna bağlı Database Webhook → send-push edge fonksiyonu (supabase/functions/send-push).
+-- Burada ikinci bir gönderici OLMAZ (çift bildirim). Eskiden eklenmişse kaldır:
 drop trigger if exists notification_push on public.notifications;
-create trigger notification_push after insert on public.notifications
-  for each row execute function public.trg_notification_push();
+drop function if exists public.trg_notification_push();
 
 -- ---------- 2) EKSİK ALARMI ----------
 -- Oyuncu tercihleri (ana anahtar: mevcut notif_yakin = "Yakınımda maç açılınca"; günde en çok 2 alarm)

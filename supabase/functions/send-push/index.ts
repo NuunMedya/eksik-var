@@ -15,11 +15,10 @@ Deno.serve(async (req) => {
     if (rec.type !== "mesaj" || rec.is_read || payload.old_record?.created_at === rec.created_at) return new Response("atlandı");
   } else if (payload.type !== "INSERT") return new Response("atlandı");
 
-  // Gece sessizliği (Türkiye saati 23:00–08:00): yalnızca zamana bağlı türler geçer
-  const hourTR = (new Date().getUTCHours() + 3) % 24;
-  if ((hourTR >= 23 || hourTR < 8) && !["yedek", "hatirlatma", "davet"].includes(rec.type)) return new Response("gece sessiz");
-
   const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  // Kullanıcının bildirim tercihleri + kendi seçtiği sessiz saatler (public.push_izinli, eksik-alarmi.sql)
+  const { data: izin, error: izinErr } = await admin.rpc("push_izinli", { p_user: rec.user_id, p_type: rec.type });
+  if (!izinErr && izin === false) return new Response("tercih kapalı / sessiz saat");
   const { data: u } = await admin.from("users").select("push_token").eq("id", rec.user_id).maybeSingle();
   if (!u?.push_token) return new Response("belirteç yok");
 
