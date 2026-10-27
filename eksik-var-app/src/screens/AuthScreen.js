@@ -170,6 +170,7 @@ export default function AuthScreen({ onLogin, onRegister, onResetRequest, onRese
     const rolMu = mode === "role";
     if (!f.name.trim()) { setLocalError("Ad soyad gerekli"); return; }
     if (!rolMu && !f.username.trim()) { setLocalError("Kullanıcı adı gerekli"); return; }
+    if (!rolMu && f.username.trim().length < 3) { setLocalError("Kullanıcı adı en az 3 karakter olmalı"); return; }
     if (!e164) { setLocalError("Geçerli bir cep numarası gir (5XX XXX XX XX)"); return; }
     if (f.password.length < 6) { setLocalError("Şifre en az 6 karakter olmalı"); return; }
     if (!agreed) { setLocalError("Devam etmek için şartları kabul etmelisin"); return; }
@@ -325,7 +326,7 @@ export default function AuthScreen({ onLogin, onRegister, onResetRequest, onRese
 
             <Alan label="Ad Soyad" zorunlu><Kutu placeholder="Ahmet Yılmaz" value={f.name} onChangeText={set("name")} autoCapitalize="words" /></Alan>
             <Alan label="Kullanıcı Adı" zorunlu ipucu="Küçük harf, rakam ve alt çizgi">
-              <Kutu placeholder="ahmet_y" value={f.username} onChangeText={(v) => set("username")(v.toLowerCase())} autoCapitalize="none" autoCorrect={false} />
+              <Kutu placeholder="ahmet_y" value={f.username} onChangeText={(v) => set("username")(v.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20))} autoCapitalize="none" autoCorrect={false} maxLength={20} />
             </Alan>
             <Alan label="Telefon Numarası" zorunlu ipucu="SMS gelmez; numaran hesabının anahtarıdır, kimseye gösterilmez."><TelefonKutu value={f.phone} onChangeText={set("phone")} /></Alan>
             <Alan label="Şifre" zorunlu><SifreKutu value={f.password} onChangeText={set("password")} yeni /></Alan>
