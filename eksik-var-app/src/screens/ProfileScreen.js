@@ -8,7 +8,7 @@ import { badgesFor } from "../badges";
 import { AvatarPicker, RolRozeti } from "../components";
 import { chooseAvatar } from "../avatar";
 
-export default function ProfileScreen({ user, pendingRate, onRate, onLogout, onSettings, onInvite, onAvatar, settings = DEFAULT_SETTINGS, events = [], team = null, onTeam = () => {}, marketMine = null, onMarket = () => {}, onOpenEvent = () => {}, onPositionsChange = () => {}, onEdit = () => {}, onBringTeam = () => {} }) {
+export default function ProfileScreen({ user, pendingRate, onRate, onLogout, onSettings, onInvite, onAvatar, settings = DEFAULT_SETTINGS, events = [], team = null, onTeam = () => {}, marketMine = null, onMarket = () => {}, onOpenEvent = () => {}, onPositionsChange = () => {}, onEdit = () => {}, onBringTeam = () => {}, onBosSaat = () => {} }) {
   return (
     <ScrollView style={{ flex: 1, backgroundColor: C.chalk }} contentContainerStyle={{ paddingBottom: 120 }}>
       <View style={st.header}>
@@ -95,6 +95,20 @@ export default function ProfileScreen({ user, pendingRate, onRate, onLogout, onS
         </View>
       )}
 
+      {user.role === "isletme" && (
+        <TouchableOpacity onPress={onBosSaat} style={st.settingsRow}>
+          <View style={[st.settingsIcon, { backgroundColor: "#E7ECFE" }]}>
+            <Text style={{ fontSize: 16 }}>🏟️</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontWeight: "800", fontSize: 14, color: C.ink }}>{t("Boş saatlerim")}</Text>
+            <Text style={{ fontSize: 12, color: C.faint, marginTop: 2 }}>
+              {user.roleStatus === "onayli" ? t("Dolmayan saatini ilan et, organizatörler alsın") : t("İşletme onayı bekleniyor")}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={C.gray} />
+        </TouchableOpacity>
+      )}
       <TouchableOpacity onPress={onSettings} style={st.settingsRow}>
         <View style={st.settingsIcon}>
           <Ionicons name="settings-outline" size={18} color={C.turfText} />

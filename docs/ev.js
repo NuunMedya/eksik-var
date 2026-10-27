@@ -57,9 +57,16 @@
   window.EV = {
     feed: function (cityId, districtId, el, il, ilce) {
       el.innerHTML = '<div class="yuk">İlanlar yükleniyor…</div>';
-      rpc("public_feed", { p_city: cityId, p_district: districtId || null }).then(function (list) {
-        if (!list || !list.length) { el.innerHTML = bos(il, ilce); return; }
-        el.innerHTML = '<div class="say">' + list.length + " açık ilan · önümüzdeki 14 gün</div>" + list.map(kart).join("");
+      var saatler = rpc("public_slots", { p_city: cityId, p_district: districtId || null }).catch(function () { return []; });
+      Promise.all([rpc("public_feed", { p_city: cityId, p_district: districtId || null }), saatler]).then(function (r) {
+        var list = r[0] || [], slots = r[1] || [];
+        var ust = slots.length ? '<div class="say">🏟️ Boş saatler · saha sahiplerinden</div>' + slots.map(function (s) {
+          return '<a class="ev" href="/#indir"><div class="ev-ico">🏟️</div><div class="ev-body"><div class="ev-title">' + esc(s.venue) + '</div>' +
+            '<div class="ev-sub">' + esc(tarih(s.date)) + " · " + esc(s.sure) + " dk" + (s.district ? " · " + esc(s.district) : "") + "</div>" +
+            '<div class="ev-pills"><span class="pill hot">Saat boş · ilk alan açar</span>' + (s.price > 0 ? '<span class="pill">' + esc(s.price) + "₺ saha</span>" : "") + (s.note ? '<span class="pill">' + esc(s.note) + "</span>" : "") + "</div></div><div class=\"ev-go\">›</div></a>";
+        }).join("") : "";
+        if (!list.length && !slots.length) { el.innerHTML = bos(il, ilce); return; }
+        el.innerHTML = ust + (list.length ? '<div class="say">' + list.length + " açık ilan · önümüzdeki 14 gün</div>" + list.map(kart).join("") : "");
       }).catch(function () { el.innerHTML = '<div class="bos"><div class="bos-t">İlanlar şu an yüklenemedi</div><div class="bos-s">Biraz sonra tekrar dene ya da uygulamadan bak.</div></div>'; });
     },
     stats: function (cityId, el) {

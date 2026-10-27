@@ -11,6 +11,7 @@ import { ILLER, ilceleri } from "../trIlIlce";
 import { Avatar, Stars, SquadDots, EksikBadge, Chip, PickerSheet } from "../components";
 import MarketCard from "./MarketCard";
 import LigKart from "./LigKart";
+import BosSaatSerit from "./BosSaatSerit";
 import { marketFilter, posLabel } from "../data";
 
 function RakipCard({ ev, onOpen }) {
@@ -142,7 +143,7 @@ function ligSerpistir(list, leagues, kind) {
   return out;
 }
 
-export default function HomeScreen({ user, events, onOpen, onAttendance, onChangeCity, onNotifications, unreadCount = 0, blockedIds = [], onCreate = () => {}, onBringTeam = () => {}, loading = false, offline = false, sponsors = [], onSponsor = () => {}, market = [], onOpenPlayer = () => {}, onEditListing = () => {}, onOfferPlayer = null, initialKind = "oyuncu" , onCreateRakip, onMatches = () => {}, onOpenShowcase = () => {}, leagues = [], onLeagueApply = () => {}, onLeagueOpen = () => {} }) {
+export default function HomeScreen({ user, events, onOpen, onAttendance, onChangeCity, onNotifications, unreadCount = 0, blockedIds = [], onCreate = () => {}, onBringTeam = () => {}, loading = false, offline = false, sponsors = [], onSponsor = () => {}, market = [], onOpenPlayer = () => {}, onEditListing = () => {}, onOfferPlayer = null, initialKind = "oyuncu" , onCreateRakip, onMatches = () => {}, onOpenShowcase = () => {}, leagues = [], onLeagueApply = () => {}, onLeagueOpen = () => {}, slots = [], onTakeSlot = () => {} }) {
   const [district, setDistrict] = useState("Tümü");
   const [cat, setCat] = useState(1); // açılış: ⚽ seçili
   const [kind, setKind] = useState(initialKind);
@@ -255,6 +256,9 @@ export default function HomeScreen({ user, events, onOpen, onAttendance, onChang
         contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
         ListHeaderComponent={
           <View>
+            {kind === "oyuncu" && (
+              <BosSaatSerit slots={slots.filter((s) => s.cat === cat && (district === "Tümü" || s.district === district))} onTake={onTakeSlot} />
+            )}
             {kind === "oyuncu" && leagues.length > 0 && (
               <LigKart lig={leagues[0]} featured onApply={onLeagueApply} onOpen={onLeagueOpen} />
             )}

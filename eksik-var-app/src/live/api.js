@@ -721,6 +721,50 @@ export async function leagueApply(id, { tur, takim, not: notu }) {
   if (error) throw error;
 }
 
+/* ---------- işletme boş saatleri ---------- */
+const SLOT_COLS = "id, isletme_id, city_id, district_id, category_id, venue_name, starts_at, sure_dk, toplam_ucret, not_, durum, event_id, created_at, isletme:users!bos_saatler_isletme_id_fkey(id, full_name, avatar_url), districts(name), cities(name)";
+function mapSlot(r, meId) {
+  const d = new Date(r.starts_at);
+  const dateISO = toDateISO(d), time = hhmm(d);
+  return {
+    id: r.id, venue: r.venue_name, cat: r.category_id || 1, city: r.cities ? r.cities.name : "", district: r.districts ? r.districts.name : null,
+    cityId: r.city_id, districtId: r.district_id, dateISO, time, weekday: d.getDay(), date: fmtEventDate(dateISO, time), startsAt: r.starts_at,
+    sure: r.sure_dk, toplam: Number(r.toplam_ucret || 0), not: r.not_ || "", durum: r.durum, eventId: r.event_id,
+    isletme: r.isletme ? { id: r.isletme.id, name: r.isletme.full_name, avatar: r.isletme.avatar_url } : null, mine: r.isletme_id === meId,
+  };
+}
+export async function listSlots(meId, cityId) {
+  const since = new Date().toISOString();
+  let q = supabase.from("bos_saatler").select(SLOT_COLS).eq("durum", "acik").gt("starts_at", since).order("starts_at").limit(40);
+  if (cityId) q = q.eq("city_id", cityId);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data || []).map((r) => mapSlot(r, meId));
+}
+export async function mySlots(meId) {
+  const { data, error } = await supabase.from("bos_saatler").select(SLOT_COLS).eq("isletme_id", meId).gt("starts_at", new Date(Date.now() - 86400000).toISOString()).order("starts_at").limit(60);
+  if (error) throw error;
+  return (data || []).map((r) => mapSlot(r, meId));
+}
+export async function createSlot(me, f) {
+  const cityId = PLAKA[f.city] || me.cityId;
+  let districtId = null;
+  if (f.district) { const { data: d } = await supabase.from("districts").select("id").eq("city_id", cityId).eq("name", f.district).maybeSingle(); districtId = d ? d.id : null; }
+  const { error } = await supabase.from("bos_saatler").insert({
+    isletme_id: me.id, city_id: cityId, district_id: districtId, category_id: Number(f.cat) || 1, venue_name: f.venue.trim(),
+    starts_at: new Date(`${f.dateISO}T${f.time}:00`).toISOString(), sure_dk: Number(f.sure) || 60, toplam_ucret: Number(f.toplam) || 0, not_: (f.not || "").trim() || null,
+  });
+  if (error) throw error;
+}
+export async function cancelSlot(id) {
+  const { error } = await supabase.from("bos_saatler").update({ durum: "iptal" }).eq("id", id);
+  if (error) throw error;
+}
+export async function takeSlot(id, eventId) {
+  const { error } = await supabase.rpc("bos_saat_al", { p_id: id, p_event: eventId });
+  if (error) throw error;
+}
+
 export async function listSponsors() {
   const { data, error } = await supabase.from("sponsors")
     .select("id, name, emoji, color, tagline, cta, url, priority, logo_url")

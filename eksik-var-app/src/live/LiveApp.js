@@ -47,6 +47,7 @@ import TennisScreen from "../screens/TennisScreen";
 import { registerForPush, onNotificationTap } from "../push";
 import AuthScreen from "../screens/AuthScreen";
 import HomeScreen from "../screens/HomeScreen";
+import BosSaatScreen from "../screens/BosSaatScreen";
 import EventDetailScreen from "../screens/EventDetailScreen";
 import CreateScreen from "../screens/CreateScreen";
 import ChatsScreen from "../screens/ChatsScreen";
@@ -153,6 +154,8 @@ export default function LiveApp() {
   const [notifs, setNotifs] = useState([]);
   const [sponsors, setSponsors] = useState(DEFAULT_SPONSORS);   // panel listesi varsayılanı ezer
   const [leagues, setLeagues] = useState([]);
+  const [slots, setSlots] = useState([]);
+  const slotRef = useRef(null);   // "Bu saati al" ile açılan ilan formu → hangi boş saat
   const [posts, setPosts] = useState([]);
   const [composer, setComposer] = useState(false);
   const [postBusy, setPostBusy] = useState(false);
@@ -598,6 +601,7 @@ export default function LiveApp() {
     creatingRef.current = true;
     try {
       const id = await api.createEvent(meId, f);
+      if (slotRef.current) { const sid = slotRef.current; slotRef.current = null; try { await api.takeSlot(sid, id); olay("bos_saat_alindi"); refreshSlots(); } catch { showToast(t("Maç açıldı ama boş saat az önce başkası tarafından alınmış olabilir; işletmeyle teyitleş")); } }
       olay("ilan_acildi", { brans: Number(f.cat), tur: f.kind || "oyuncu", ucretli: Number(f.price) > 0, toplamdan: !!f.totalCost, haftalik: f.recurrence === "haftalik" });
       if (f.cat && !((me.favCats || []).includes(f.cat))) {
         const yeniBrans = [...(me.favCats || []), f.cat];
@@ -907,7 +911,7 @@ export default function LiveApp() {
     if (n.type === "teklif") { refreshOffers(); setView({ name: "teklifler" }); return; }
     if (n.type === "yoklama" && evId) { setTab("home"); setView({ name: "attendance", id: evId }); return; }
     if (n.type === "alarm" && evId) { olay("alarm_acildi"); setTab("home"); setView({ name: "event", id: evId }); return; }
-    if (n.type === "gorev" && evId) { setTab("home"); setView({ name: "event", id: evId }); return; }
+    if ((n.type === "gorev" || n.type === "bos_saat") && evId) { setTab("home"); setView({ name: "event", id: evId }); return; }
     if (n.type === "puanlama" && evId) { setTab("home"); setView({ name: "rate", id: evId }); return; }
     if (chId && chats.some((c) => c.id === chId)) { openChat(chId); return; }
     if (evId && events.some((e) => e.id === evId)) { setTab("home"); setView({ name: "event", id: evId }); return; }
@@ -925,6 +929,21 @@ export default function LiveApp() {
       .then((ls) => { setLeagues(ls); if (ls.length) api.leagueSeen(ls.map((l) => l.id)).catch(() => {}); })
       .catch(() => { /* tablo yoksa ya da ağ hatası: mevcut listeyi koru */ });
   }, [meId, me && me.cityId]);
+  const refreshSlots = useCallback(async () => {
+    if (!meId || !me) return;
+    try { setSlots(await api.listSlots(meId, me.cityId || null)); } catch { /* tablo yoksa sessiz */ }
+  }, [meId, me && me.cityId]);
+  useEffect(() => { refreshSlots(); }, [refreshSlots]);
+  const bosSaatAl = (s) => {
+    slotRef.current = s.id;
+    setTab("home");
+    setView({ name: "create", initial: {
+      title: "", cat: s.cat, city: s.city || me.city, district: s.district || "", venue: s.venue, dateISO: s.dateISO, weekday: s.weekday, time: s.time,
+      capacity: 14, needed: 2, price: s.toplam > 0 ? Math.ceil(s.toplam / 14) : 0, totalCost: s.toplam > 0 ? s.toplam : null, level: "Farketmez",
+      desc: s.not ? `Saha notu: ${s.not}` : "", kind: "oyuncu", recurrence: "yok",
+    }, repeat: true });
+    showToast(t("Saha, saat ve ücret dolu geldi — eksik sayısını yaz, yayınla"));
+  };
   const ligBasvur = (lig) => {
     const gonder = async (tur) => {
       try { await api.leagueApply(lig.id, { tur, takim: tur === "takim" ? (myTeamRow && myTeamRow.name) || null : null }); } catch { /* sayaç; akışı kesme */ }
@@ -1022,7 +1041,7 @@ export default function LiveApp() {
               onAttendance={(id) => setView({ name: "attendance", id })} onChangeCity={changeCity}
               onNotifications={() => setView({ name: "notifications" })} unreadCount={unreadNotifs} blockedIds={blocked.map((b) => b.id)}
               onCreate={() => setView({ name: "create" })} onCreateRakip={() => setView({ name: "create", preset: "rakip" })} onBringTeam={() => setView({ name: "create", preset: "ekip" })} loading={loading} offline={offline}
-              sponsors={sponsors} leagues={leagues} onLeagueApply={ligBasvur} onLeagueOpen={ligAc}
+              sponsors={sponsors} leagues={leagues} onLeagueApply={ligBasvur} onLeagueOpen={ligAc} slots={slots} onTakeSlot={bosSaatAl}
               onSponsor={(sp) => { api.sponsorClick(sp.id).catch(() => {}); Linking.openURL(sp.url).catch(() => showToast(t("Bağlantı açılamadı"))); }}
               market={market} onOpenPlayer={(p) => p.userId === "me" ? setTab("profile") : openProfile({ id: p.userId, name: p.name })}
               onEditListing={() => setView({ name: "editProfile" })}
@@ -1054,13 +1073,20 @@ export default function LiveApp() {
               onPin={pinMessage} canPin={canPinIn(activeChat)} onSendImage={sendImage} onLoadOlder={loadOlder} loadingOlder={loadingOlder} onBack={() => setView({ name: "root" })} onSend={sendMessage}
               onConfirmJoin={confirmJoin} onGoChat={openChat} />
           )}
-          {tab === "profile" && !ustEkran && view.name !== "settings" && (
+          {view.name === "bosSaat" && (
+            <View style={StyleSheet.absoluteFill}>
+              <BosSaatScreen user={user} onBack={() => setView({ name: "root" })} onList={() => api.mySlots(meId)}
+                onCreate={async (f) => { try { await api.createSlot(me, f); olay("bos_saat_ilan"); showToast(t("Boş saat yayında 🏟️")); refreshSlots(); } catch (e) { fail(e); throw e; } }}
+                onCancel={async (id) => { try { await api.cancelSlot(id); refreshSlots(); } catch (e) { fail(e); } }} />
+            </View>
+          )}
+          {tab === "profile" && !ustEkran && view.name !== "settings" && view.name !== "bosSaat" && (
             <ProfileScreen user={user} settings={settings} pendingRate={pendingRatings[0] || null} onRate={(id) => { setTab("home"); setView({ name: "rate", id }); }}
               events={events} onOpenEvent={(id) => { setTab("home"); setView({ name: "event", id }); }}
               onPositionsChange={async (list) => { setMe((m) => ({ ...m, positions: list })); try { await api.updatePositions(meId, list); } catch (e) { fail(e); } }}
               marketMine={myListing} onMarket={() => setView({ name: "editProfile" })}
               onEdit={() => setView({ name: "editProfile", bolum: "kimlik" })} onBringTeam={() => setView({ name: "create", preset: "ekip" })}
-              onSettings={() => setView({ name: "settings" })} onInvite={inviteFriends} onAvatar={changeAvatar} onLogout={logout} />
+              onSettings={() => setView({ name: "settings" })} onInvite={inviteFriends} onAvatar={changeAvatar} onLogout={logout} onBosSaat={() => setView({ name: "bosSaat" })} />
           )}
 
           {activeEvent && (
@@ -1091,7 +1117,7 @@ export default function LiveApp() {
           {view.name === "create" && (
             <View style={StyleSheet.absoluteFill}>
               <CreateScreen user={user} preset={view.preset || null} initial={view.id ? events.find((e) => e.id === view.id) : (view.initial || null)} repeat={!!view.repeat}
-                onBack={() => setView(view.id ? { name: "event", id: view.id } : { name: "root" })}
+                onBack={() => { slotRef.current = null; setView(view.id ? { name: "event", id: view.id } : { name: "root" }); }}
                 onCreate={(f) => (view.id ? updateEvent(view.id, f) : createEvent(f))}
                 onListVenues={(city, cat, q) => api.listVenues(city, cat, q)}
                 onAddVenue={(city, cat, name, lat, lng) => api.addVenue(meId, city, cat, name, lat, lng)} />
