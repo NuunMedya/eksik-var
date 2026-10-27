@@ -1,13 +1,23 @@
 {
   "expo": {
-    "name": "eksik-var-app",
+    "name": "Eksik Var",
     "slug": "eksik-var-app",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "buildNumber": "4",
+      "associatedDomains": [
+        "applinks:eksikvarapp.com"
+      ],
+      "infoPlist": {
+        "NSCameraUsageDescription": "Profil fotoğrafı ve dekont için kamera kullanılır.",
+        "NSPhotoLibraryUsageDescription": "Profil fotoğrafı, ilan görseli ve dekont seçmek için galeriye erişilir.",
+        "NSMicrophoneUsageDescription": "Uygulama içi sesli arama için mikrofon kullanılır.",
+        "NSLocationWhenInUseUsageDescription": "Yakınındaki maçları ve sahaları göstermek için konum kullanılır."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -15,7 +25,25 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "versionCode": 4,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "eksikvarapp.com",
+              "pathPrefix": "/e/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -27,6 +55,7 @@
       "expo-video",
       "expo-font",
       "expo-asset"
-    ]
+    ],
+    "scheme": "eksikvar"
   }
 }

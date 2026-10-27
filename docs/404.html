@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eksik Var — Maça katıl</title>
+<meta name="description" content="Eksik Var'da bir maça davet edildin. Uygulamada aç ve kadroya katıl.">
+<style>
+  :root{--turf:#0B3D2E;--pitch:#17994F;--kit:#F4600C;--ink:#14201B;--faint:#5E6E66;--chalk:#F7F6F2;--line:#E8E5DD}
+  *{box-sizing:border-box}body{margin:0;font-family:-apple-system,system-ui,Segoe UI,Roboto,sans-serif;background:var(--turf);color:var(--ink);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .card{background:#fff;border-radius:24px;padding:28px 24px;max-width:420px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+  .logo{font-weight:900;font-size:28px;letter-spacing:-.5px;color:var(--turf)}.logo span{color:var(--kit)}
+  h1{font-size:20px;margin:18px 0 6px}p{color:var(--faint);font-size:14px;line-height:1.5;margin:0 0 18px}
+  .btn{display:block;width:100%;padding:15px;border-radius:14px;font-weight:800;font-size:15px;text-decoration:none;margin-top:10px;border:0;cursor:pointer}
+  .b1{background:var(--pitch);color:#fff}.b2{background:var(--chalk);color:var(--turf);border:1px solid var(--line)}
+  .meta{font-size:12px;color:var(--faint);margin-top:16px}
+  .hide{display:none}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">EKSİK <span>VAR</span></div>
+  <div id="mac" class="hide">
+    <h1>Bir maça davet edildin ⚽</h1>
+    <p>Kadroda yer var. Uygulama yüklüyse aşağıdaki düğme seni doğrudan maça götürür; yüklü değilse önce indir, sonra bu linke tekrar dokun.</p>
+    <a id="ac" class="btn b1" href="#">Uygulamada aç</a>
+    <a id="play" class="btn b2" href="https://play.google.com/store/apps/details?id=com.nuunmedya.eksikvar">Google Play'den indir</a>
+    <a id="ios" class="btn b2" href="https://eksikvarapp.com/#indir">App Store'dan indir</a>
+    <div class="meta">Halı saha, basketbol, voleybol — "bir kişi eksiğiz" derdi bitti.</div>
+  </div>
+  <div id="yok" class="hide">
+    <h1>Sayfa bulunamadı</h1>
+    <p>Aradığın sayfa taşınmış ya da hiç olmamış olabilir.</p>
+    <a class="btn b1" href="https://eksikvarapp.com/">Ana sayfaya dön</a>
+  </div>
+</div>
+<script>
+  (function(){
+    var m = location.pathname.match(/\/e\/([A-Za-z0-9-]+)/);
+    var q = location.search || "";
+    if (!m) { document.getElementById("yok").classList.remove("hide"); return; }
+    var id = m[1], derin = "eksikvar://e/" + id + q;
+    document.getElementById("mac").classList.remove("hide");
+    var ac = document.getElementById("ac"); ac.href = derin;
+    var ua = navigator.userAgent || "";
+    if (/android/i.test(ua)) document.getElementById("ios").classList.add("hide");
+    if (/iphone|ipad|ipod/i.test(ua)) document.getElementById("play").classList.add("hide");
+    // Telefonda otomatik dene: uygulama yüklüyse açılır, değilse sayfada kalır
+    if (/android|iphone|ipad|ipod/i.test(ua)) setTimeout(function(){ location.href = derin; }, 600);
+  })();
+</script>
+</body>
+</html>

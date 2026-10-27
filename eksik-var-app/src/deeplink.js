@@ -1,4 +1,4 @@
-// Derin bağlantılar: https://eksikvar.app/e/<id>, eksikvar://e/<id>, Expo Go'da exp://.../--/e/<id>
+// Derin bağlantılar: https://eksikvarapp.com/e/<id>, eksikvar://e/<id>, Expo Go'da exp://.../--/e/<id>
 import { useEffect } from "react";
 import { Linking } from "react-native";
 

@@ -355,9 +355,9 @@ export function fmtEventDate(iso, time) {
 }
 
 /* ---------- paylaşım ---------- */
-// Not: eksikvar.app alan adı yayın aşamasında bağlanacak; o güne kadar link yer tutucu,
-// mesajın kendisi WhatsApp'ta okunabilir. ?d= parametresi daveti kimin attığını taşır.
-export const APP_LINK = "https://eksikvar.app";
+// Paylaşım linkleri eksikvarapp.com/e/<id> → site "uygulamada aç" sayfası (docs/404.html) → eksikvar://e/<id>
+// ?d= parametresi daveti kimin attığını taşır.
+export const APP_LINK = "https://eksikvarapp.com";
 
 export function buildShareText(ev, user) {
   const cat = CATEGORIES.find((c) => c.id === ev.cat);

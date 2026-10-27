@@ -11,7 +11,6 @@ import { C, onThemeChange } from "../theme";
    Para uygulamadan geçmez; bu ekran sadece havaleyi 10 saniyeye indirir. */
 
 const ibanBicim = (iban) => (iban || "").replace(/\s/g, "").replace(/(.{4})/g, "$1 ").trim();
-const maskele = (iban) => { const d = (iban || "").replace(/\s/g, ""); return d.length > 8 ? `${d.slice(0, 4)} •••• •••• ${d.slice(-4)}` : d; };
 
 export default function OdemeSheet({ visible, onClose, ev, amount, loadIban, onCopy, onPickProof, onClaim }) {
   const [bilgi, setBilgi] = useState(null);   // { iban, holder, organizerName }

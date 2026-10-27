@@ -76,7 +76,7 @@ const HATA_MESAJI = {
   engellendi:           "Bu kişiyle aranızda engel var",
   kadro_dolu:           "Kontenjan doldu — yedek listesine girebilirsin",
   yetki_yok:            "Bu işlem için yetkin yok",
-  kapali_hesap:         "Hesabın şu an işlem yapamıyor. Bilgi için destek@eksikvar.app",
+  kapali_hesap:         "Hesabın şu an işlem yapamıyor. Bilgi için destek@eksikvarapp.com",
   kapali_ilan:          "Bu etkinlik başvuruya kapalı",
   zaten_kadroda:        "Zaten kadrodasın",
   zaten_sikayet:        "Bu kişiyi bugün zaten şikayet ettin — ekip inceliyor",
@@ -111,8 +111,8 @@ const friendly = (e) => {
   if (m.includes("already registered")) return "Bu numara zaten kayıtlı — Giriş yap sekmesini kullan";
   if (m.includes("Signups not allowed") || m.includes("otp_disabled")) return "Bu numara kayıtlı değil — Kayıt ol sekmesini kullan";
   if (m.includes("Token has expired") || m.includes("invalid") && m.includes("otp")) return "Kod hatalı ya da süresi dolmuş";
-  if (m.includes("banned")) return "Bu hesap kapatılmış. İtiraz için destek@eksikvar.app";
-  if (m.includes("HESAP_YASAKLI")) return "Bu numara ile hesap açılamıyor. Bilgi için destek@eksikvar.app";
+  if (m.includes("banned")) return "Bu hesap kapatılmış. İtiraz için destek@eksikvarapp.com";
+  if (m.includes("HESAP_YASAKLI")) return "Bu numara ile hesap açılamıyor. Bilgi için destek@eksikvarapp.com";
   if (m.includes("rate limit") || m.includes("Too many")) return "Çok fazla deneme — biraz bekleyip tekrar dene";
   if (m.includes("MEVKI_DOLU")) return "Bu mevki için yer kalmadı";
   if (m.includes("DAVET_VAR")) return "Bu kişi zaten başvurmuş ya da davetli";
@@ -967,7 +967,7 @@ export default function LiveApp() {
         <Text style={{ color: C.mist, fontSize: 14, marginTop: 10, textAlign: "center", lineHeight: 20 }}>
           {me.statusReason ? `Sebep: ${me.statusReason}. ` : ""}
           {suspended && me.suspendedUntil ? `Askı ${new Date(me.suspendedUntil).toLocaleDateString("tr-TR")} tarihine kadar sürecek. ` : ""}
-          İtiraz etmek için destek@eksikvar.app adresine yazabilirsin.
+          İtiraz etmek için destek@eksikvarapp.com adresine yazabilirsin.
         </Text>
         <TouchableOpacity onPress={logout} style={{ marginTop: 26, backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 999, paddingHorizontal: 18, paddingVertical: 10 }}>
           <Text style={{ color: "#fff", fontWeight: "800" }}>{t("Çıkış yap")}</Text>
