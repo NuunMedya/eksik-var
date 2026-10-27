@@ -89,7 +89,7 @@ begin
        or u.positions = '[]'::jsonb
        or exists (select 1 from jsonb_object_keys(new.needed_positions) k where u.positions ? k)
      )
-     and (select count(*) from public.notifications nn where nn.user_id = u.id and nn.type = 'alarm' and nn.created_at > date_trunc('day', now() at time zone 'Europe/Istanbul') at time zone 'Europe/Istanbul') < 2
+     and (select count(*) from public.notifications nn where nn.user_id = u.id and nn.type = 'alarm' and nn.created_at >= now() - interval '24 hours') < 2
      and not exists (select 1 from public.blocks b where (b.blocker_id = u.id and b.blocked_id = new.organizer_id) or (b.blocker_id = new.organizer_id and b.blocked_id = u.id))
    order by (u.district_id = new.district_id) desc, u.reliability_pct desc nulls last
    limit 300;
