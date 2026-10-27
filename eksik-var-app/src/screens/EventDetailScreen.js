@@ -17,6 +17,7 @@ export default function EventDetailScreen({ onPinVenue = null, onUpdateDesc = nu
   onCalendar = () => {}, onDirections = () => {}, onAddGuest = () => {}, onAddGuests = null, onRemoveGuest = () => {}, onToggleGuest = () => {},
   onCheckIn = () => {}, disputes = [], onFixAttendance = () => {}, onConfirmAllPayments = () => {},
   statRoster = [], onSetStat = () => {}, onShareSummary = () => {}, checkinCode = null, onOpenCode = () => {}, onCheckInWithCode = () => {},
+  me = null, onGorevAl = () => {}, onGorevBirak = () => {}, onOpenUser = () => {},
 }) {
   const kadroRef = useRef(null);
   const [codeInput, setCodeInput] = React.useState("");
@@ -109,6 +110,44 @@ export default function EventDetailScreen({ onPinVenue = null, onUpdateDesc = nu
             </View>
           ))}
         </View>
+
+        {(() => {
+          const g = ev.gorev || {}; const roller = [["hakem", "🟣", "Hakem", "Ben yönetirim", ev.hakem, g.hakem], ["medya", "🎥", "Kameraman", "Ben çekerim", ev.medya, g.medya]].filter(([, , , , kisi, aranan]) => kisi || aranan);
+          if (!roller.length) return null;
+          const benimRol = me && me.roleStatus === "onayli" ? me.role : null;
+          const aktif = ev.status !== "iptal" && ev.status !== "tamamlandi" && !ev.ended;
+          return (
+            <View style={[st.card, { borderLeftWidth: 4, borderLeftColor: "#7C5CF2" }]}>
+              <Text style={st.cardTitle}>{t("MAÇ GÜNÜ EKİBİ")}</Text>
+              {roller.map(([rol, ikon, ad, cta, kisi]) => (
+                <View key={rol} style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 10 }}>
+                  <Text style={{ fontSize: 20 }}>{ikon}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13.5, fontWeight: "900", color: C.ink }}>{t(ad)}</Text>
+                    {kisi ? (
+                      <TouchableOpacity onPress={() => onOpenUser(kisi)}><Text style={{ fontSize: 12.5, color: C.pitch, fontWeight: "800", marginTop: 1 }}>{kisi.name} · @{kisi.username}</Text></TouchableOpacity>
+                    ) : (
+                      <Text style={{ fontSize: 12.5, color: C.kit, fontWeight: "800", marginTop: 1 }}>{t("Aranıyor · ilk kabul eden alır")}</Text>
+                    )}
+                  </View>
+                  {aktif && !kisi && !ev.mine && benimRol === rol && (
+                    <TouchableOpacity onPress={() => onGorevAl(ev.id, rol)} style={{ backgroundColor: "#7C5CF2", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 }}>
+                      <Text style={{ color: "#fff", fontWeight: "900", fontSize: 12.5 }}>{t(cta)}</Text>
+                    </TouchableOpacity>
+                  )}
+                  {aktif && kisi && me && (kisi.id === me.id || ev.mine) && (
+                    <TouchableOpacity onPress={() => onGorevBirak(ev.id, rol)} style={{ borderWidth: 1, borderColor: C.line, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 }}>
+                      <Text style={{ color: C.faint, fontWeight: "800", fontSize: 12 }}>{t(kisi.id === me.id ? "Bırak" : "Kaldır")}</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+              {!ev.mine && roller.some(([, , , , kisi]) => !kisi) && !benimRol && (
+                <Text style={{ fontSize: 11, color: C.faint, marginTop: 10 }}>{t("Hakem ya da medya hesabınla kayıt olup onay aldıysan burada görevi alabilirsin.")}</Text>
+              )}
+            </View>
+          );
+        })()}
 
         {rakip && (
           <View style={[st.card, { borderLeftWidth: 4, borderLeftColor: C.kit }]}>

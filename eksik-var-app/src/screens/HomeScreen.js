@@ -64,6 +64,8 @@ function EventCard({ ev, onOpen }) {
             <View style={{ flexDirection: "row", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
               <View style={[st.pill, { backgroundColor: ev.price === 0 ? C.pitchSoft : C.chalk }]}><Text style={[st.pillText, ev.price === 0 && { color: C.pitch }]}>{ev.price === 0 ? "Ücretsiz" : `${ev.price}₺/kişi`}</Text></View>
               {ev.level && ev.level !== "Farketmez" && <View style={[st.pill, { backgroundColor: C.chalk }]}><Text style={st.pillText}>{ev.level}</Text></View>}
+              {ev.gorev && ev.gorev.hakem && !ev.hakem && <View style={[st.pill, { backgroundColor: "#EEE9FD" }]}><Text style={[st.pillText, { color: "#5B3FD6" }]}>🟣 {t("Hakem aranıyor")}</Text></View>}
+              {ev.gorev && ev.gorev.medya && !ev.medya && <View style={[st.pill, { backgroundColor: "#EEE9FD" }]}><Text style={[st.pillText, { color: "#5B3FD6" }]}>🎥 {t("Kameraman aranıyor")}</Text></View>}
             </View>
           </View>
         </View>

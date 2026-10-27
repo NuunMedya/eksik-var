@@ -787,6 +787,20 @@ export default function LiveApp() {
       { text: t("Böl"), onPress: async () => { try { const yeni = await api.rebalancePrice(eventId); await refreshEvents(); showToast(yeni === (ev && ev.price) ? t("Kişi başı zaten güncel") : t("Kişi başı {p0}₺ oldu · herkese bildirildi", { p0: yeni })); } catch (e) { fail(e); } } },
     ]);
   };
+  /* --- hakem / kameraman görevi --- */
+  const gorevAl = (eventId, rol) => {
+    const ad = rol === "hakem" ? t("Hakem") : t("Kameraman");
+    Alert.alert(t("{p0} görevini al", { p0: ad }), t("Maça {p0} olarak atanırsın, grup sohbetine eklenirsin ve organizatöre haber gider.", { p0: ad.toLowerCase() }), [
+      { text: t("Vazgeç"), style: "cancel" },
+      { text: t("Görevi al"), onPress: async () => { try { await api.gorevAl(eventId, rol); olay("gorev_alindi", { rol }); await refreshEvents(); await refreshChats(); showToast(t("Görev sende · organizatöre bildirildi")); } catch (e) { fail(e); } } },
+    ]);
+  };
+  const gorevBirak = (eventId, rol) => {
+    Alert.alert(t("Görevi kaldır"), t("Bu kişi maçtan çıkarılır ve görev yeniden aranır."), [
+      { text: t("Vazgeç"), style: "cancel" },
+      { text: t("Kaldır"), style: "destructive", onPress: async () => { try { await api.gorevBirak(eventId, rol); await refreshEvents(); await refreshChats(); showToast(t("Görev kaldırıldı")); } catch (e) { fail(e); } } },
+    ]);
+  };
   /* --- gol/asist, sezon, yoklama kodu --- */
   const [checkinCodes, setCheckinCodes] = useState({});
   const [seasons, setSeasons] = useState({});
@@ -893,6 +907,7 @@ export default function LiveApp() {
     if (n.type === "teklif") { refreshOffers(); setView({ name: "teklifler" }); return; }
     if (n.type === "yoklama" && evId) { setTab("home"); setView({ name: "attendance", id: evId }); return; }
     if (n.type === "alarm" && evId) { olay("alarm_acildi"); setTab("home"); setView({ name: "event", id: evId }); return; }
+    if (n.type === "gorev" && evId) { setTab("home"); setView({ name: "event", id: evId }); return; }
     if (n.type === "puanlama" && evId) { setTab("home"); setView({ name: "rate", id: evId }); return; }
     if (chId && chats.some((c) => c.id === chId)) { openChat(chId); return; }
     if (evId && events.some((e) => e.id === evId)) { setTab("home"); setView({ name: "event", id: evId }); return; }
@@ -1060,6 +1075,7 @@ export default function LiveApp() {
                 onRecordScore={recordScore} myMvpVote={mvpVotes[activeEvent.id] || null}
                 onClaimPayment={claimPayment} onConfirmPayment={confirmPayment} onSendIban={sendIban} onRemindPayments={remindPayments} onCopyIban={copyIbanFor}
                 onPay={(ev) => setOdemeEv(ev)} onOpenProof={dekontAc} onRebalance={yenidenBol}
+                me={me} onGorevAl={gorevAl} onGorevBirak={gorevBirak} onOpenUser={(k) => openProfile({ id: k.id, name: k.name, username: k.username || "-", avatar: k.avatar, rating: 0, count: 0, rel: 100 })}
                 paymentDetails={paymentDetails} onSaveIban={saveIban}
                 onCalendar={calendarFor} onDirections={directionsFor} onAddGuest={addGuest} onUpdateNeeds={async (id, needs) => { try { await api.updateEventNeeds(id, needs); await refreshEvents(); showToast(t("İhtiyaç güncellendi \u2713")); } catch (e) { fail(e); } }}
                 onStopSeries={async (id) => { try { await api.stopSeries(id); await refreshEvents(); showToast(t("Seri durduruldu — bu hafta son \u23F9")); } catch (e) { fail(e); } }}

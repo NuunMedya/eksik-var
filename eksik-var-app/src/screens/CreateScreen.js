@@ -19,7 +19,7 @@ export default function CreateScreen({ user, onBack, onCreate, initial = null, p
     dateISO: initial.dateISO || days[0].iso, weekday: initial.weekday != null ? initial.weekday : days[0].weekday, time: initial.time || "21:00",
     recurrence: initial.recurrence || "yok", weeks: 8, needs: initial.needs || {},
     capacity: String(initial.capacity), needed: String(initial.needed), price: String(initial.price), totalCost: initial.totalCost ? String(initial.totalCost) : "", level: initial.level, desc: initial.desc || "",
-    kind: initial.kind || "oyuncu", teamName: initial.teamName || user.teamName || "", format: initial.format || inferFormat(initial.cat, initial.capacity), offlineRegulars: String(initial.offlineRegulars || 0),
+    kind: initial.kind || "oyuncu", teamName: initial.teamName || user.teamName || "", format: initial.format || inferFormat(initial.cat, initial.capacity), offlineRegulars: String(initial.offlineRegulars || 0), gorevHakem: !!(initial.gorev && initial.gorev.hakem), gorevMedya: !!(initial.gorev && initial.gorev.medya),
     venueMode: initial.venueMode || "bizde", costMode: initial.costMode || "yari_yariya",
     venueLat: initial.venueLat ?? null, venueLng: initial.venueLng ?? null, venueId: initial.venueId || null,
   } : {
@@ -27,7 +27,7 @@ export default function CreateScreen({ user, onBack, onCreate, initial = null, p
     dateISO: days[0].iso, weekday: days[0].weekday, time: "21:00",
     recurrence: "yok", weeks: 8, needs: {},
     capacity: "14", needed: "2", price: "150", totalCost: "", level: "Farketmez", desc: "",
-    kind: "oyuncu", teamName: user.teamName || "", format: DEFAULT_FORMAT[1], venueMode: "bizde", costMode: "yari_yariya", offlineRegulars: "0",
+    kind: "oyuncu", teamName: user.teamName || "", format: DEFAULT_FORMAT[1], venueMode: "bizde", costMode: "yari_yariya", offlineRegulars: "0", gorevHakem: false, gorevMedya: false,
     ...(preset === "ekip" ? { title: "", recurrence: "haftalik", weeks: 0, needed: "2", offlineRegulars: "10" } : {}),
     ...(preset === "rakip" ? { kind: "rakip", capacity: "7", needed: "1" } : {}),
   });
@@ -286,6 +286,16 @@ export default function CreateScreen({ user, onBack, onCreate, initial = null, p
           </Field>
         )}
 
+        <Field label={t("Maç günü destek (isteğe bağlı)")}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", rowGap: 8 }}>
+            <Chip label={t("🟣 Hakem lazım")} active={f.gorevHakem} onPress={() => setF((s) => ({ ...s, gorevHakem: !s.gorevHakem }))} />
+            <Chip label={t("🎥 Kameraman lazım")} active={f.gorevMedya} onPress={() => setF((s) => ({ ...s, gorevMedya: !s.gorevMedya }))} />
+          </View>
+          {(f.gorevHakem || f.gorevMedya) && (
+            <Text style={{ fontSize: 11, color: C.faint, marginTop: 6 }}>{t("Şehrindeki onaylı hakem/medya hesaplarına bildirim gider; ilk kabul eden maça atanır ve grup sohbetine katılır.")}</Text>
+          )}
+        </Field>
+
         <Field label={t("Seviye")}>
           <View style={{ flexDirection: "row", flexWrap: "wrap", rowGap: 8 }}>
             {["Farketmez", "Başlangıç", "Orta", "İleri"].map((l) => (
@@ -321,6 +331,7 @@ export default function CreateScreen({ user, onBack, onCreate, initial = null, p
               rakip ? ["Ücret", (COST_MODES.find(([id]) => id === f.costMode) || [null, ""])[1]] : ["Kadro", `${f.capacity} kişi · ${f.needed} eksik${Object.keys(f.needs || {}).length ? ` · ${Object.entries(f.needs).map(([k, v]) => `${v} ${k}`).join(", ")}` : ""}`],
               !rakip ? ["Ücret", Number(f.price) > 0 ? `${f.price}₺/kişi` : "Ücretsiz"] : null,
               ["Seviye", f.level],
+              f.gorevHakem || f.gorevMedya ? ["Destek", [f.gorevHakem && "Hakem", f.gorevMedya && "Kameraman"].filter(Boolean).join(" + ") + " aranıyor"] : null,
             ].filter(Boolean).map(([k, v]) => (
               <View key={k} style={{ flexDirection: "row", paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: C.line }}>
                 <Text style={{ width: 70, fontSize: 12, fontWeight: "800", color: C.faint }}>{k}</Text>

@@ -78,6 +78,9 @@ export function mapEvent(e, ctx) {
     recurrenceUntil: e.recurrence_until, desc: e.description || "Detaylar için mesaj atabilirsin.",
     attendance: null, myAttendance: ctx.attendance ? ctx.attendance[e.id] || null : null, checkedIn: !!(ctx.checked && ctx.checked[e.id]),
     checkedIns: (ctx.checkedIns && ctx.checkedIns[e.id]) || [],
+    gorev: { hakem: !!e.gorev_hakem, medya: !!e.gorev_medya },
+    hakem: e.hakem ? { id: e.hakem.id, name: e.hakem.full_name, username: e.hakem.username, avatar: e.hakem.avatar_url } : null,
+    medya: e.medya ? { id: e.medya.id, name: e.medya.full_name, username: e.medya.username, avatar: e.medya.avatar_url } : null,
   };
 }
 
@@ -290,7 +293,7 @@ export async function deleteAccount() {
 }
 
 /* ---------- etkinlikler ---------- */
-const EVENT_COLS = "*, organizer:users!organizer_id(id, full_name, username, avatar_url, rating_avg, rating_count, reliability_pct, contact_mode, contact_scope, quiet_enabled, quiet_start, quiet_end), district:districts(name), city:cities(name)";
+const EVENT_COLS = "*, organizer:users!organizer_id(id, full_name, username, avatar_url, rating_avg, rating_count, reliability_pct, contact_mode, contact_scope, quiet_enabled, quiet_start, quiet_end), hakem:users!events_hakem_id_fkey(id, full_name, username, avatar_url), medya:users!events_medya_id_fkey(id, full_name, username, avatar_url), district:districts(name), city:cities(name)";
 
 export async function listEvents(meId, cityId) {
   const since = new Date(Date.now() - 3 * 86400000).toISOString();
@@ -377,6 +380,7 @@ export async function createEvent(meId, f) {
     kind: f.kind || "oyuncu", team_name: f.teamName || null, format: f.format || null, venue_mode: f.venueMode || null, cost_mode: f.costMode || null,
     offline_regulars: Number(f.offlineRegulars) || 0,
     venue_lat: f.venueLat ?? null, venue_lng: f.venueLng ?? null,
+    gorev_hakem: !!f.gorevHakem, gorev_medya: !!f.gorevMedya,
   }).select("id").single();
   if (f.kind === "rakip" && f.teamName) await supabase.from("users").update({ team_name: f.teamName }).eq("id", meId);
   if (error) throw error;
@@ -867,9 +871,18 @@ export async function updateEvent(eventId, f) {
     skill_level: LEVEL_TO_DB[f.level] || "farketmez", needed_positions: f.needs || {},
     team_name: f.teamName || null, format: f.format || null, venue_mode: f.venueMode || null, cost_mode: f.costMode || null,
     offline_regulars: Number(f.offlineRegulars) || 0,
+    gorev_hakem: !!f.gorevHakem, gorev_medya: !!f.gorevMedya,
   }).eq("id", eventId);
   if (error) throw error;
   await supabase.rpc("event_updated_notice", { p_event: eventId });
+}
+export async function gorevAl(eventId, rol) {
+  const { error } = await supabase.rpc("gorev_al", { p_event: eventId, p_rol: rol });
+  if (error) throw error;
+}
+export async function gorevBirak(eventId, rol) {
+  const { error } = await supabase.rpc("gorev_birak", { p_event: eventId, p_rol: rol });
+  if (error) throw error;
 }
 export async function cancelEvent(eventId, reason = null) {
   const { data, error } = await supabase.rpc("cancel_event", { p_event: eventId, p_reason: reason });
