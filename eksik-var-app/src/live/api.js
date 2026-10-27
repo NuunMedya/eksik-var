@@ -23,7 +23,7 @@ export const fmtTime = (iso) => {
   return `${d.getDate()}.${pad(d.getMonth() + 1)}`;
 };
 
-const USER_COLS = "id, full_name, username, bio, skill_level, avatar_url, rating_avg, rating_count, reliability_pct, events_joined, events_organized, no_show_count, city_id, district_id, positions, fav_cat, fav_cats, cat_levels, team_name, mvp_count, is_verified, status, status_reason, suspended_until, contact_mode, contact_scope, quiet_enabled, quiet_start, quiet_end, notif_basvuru, notif_mesaj, notif_hatirlatma, notif_yakin, hesap_turu, hesap_onay, cities(name), districts(name)";
+const USER_COLS = "id, full_name, username, bio, skill_level, avatar_url, rating_avg, rating_count, reliability_pct, events_joined, events_organized, no_show_count, city_id, district_id, positions, fav_cat, fav_cats, cat_levels, team_name, mvp_count, is_verified, status, status_reason, suspended_until, contact_mode, contact_scope, quiet_enabled, quiet_start, quiet_end, notif_basvuru, notif_mesaj, notif_hatirlatma, notif_yakin, hesap_turu, hesap_onay, alarm_gunler, alarm_saat_bas, alarm_saat_bit, alarm_tum_il, cities(name), districts(name)";
 
 export function mapUser(u) {
   if (!u) return null;
@@ -42,7 +42,8 @@ export function mapUser(u) {
       mode: u.contact_mode || "ikisi", scope: u.contact_scope || "herkes",
       quiet: { enabled: !!u.quiet_enabled, start: (u.quiet_start || "22:00").slice(0, 5), end: (u.quiet_end || "08:00").slice(0, 5) },
     },
-    notif: { basvuru: u.notif_basvuru !== false, mesaj: u.notif_mesaj !== false, hatirlatma: u.notif_hatirlatma !== false, yakin: u.notif_yakin !== false },
+    notif: { basvuru: u.notif_basvuru !== false, mesaj: u.notif_mesaj !== false, hatirlatma: u.notif_hatirlatma !== false, yakin: u.notif_yakin !== false,
+      alarm: { gunler: Array.isArray(u.alarm_gunler) ? u.alarm_gunler : [0, 1, 2, 3, 4, 5, 6], bas: u.alarm_saat_bas ?? 17, bit: u.alarm_saat_bit ?? 24, tumIl: !!u.alarm_tum_il } },
   };
 }
 
@@ -260,6 +261,7 @@ export async function updateSettings(uid, settings) {
   const { error } = await supabase.from("users").update({
     contact_mode: c.mode, contact_scope: c.scope, quiet_enabled: c.quiet.enabled, quiet_start: c.quiet.start, quiet_end: c.quiet.end,
     notif_basvuru: n.basvuru, notif_mesaj: n.mesaj, notif_hatirlatma: n.hatirlatma, notif_yakin: n.yakin !== false,
+    ...(n.alarm ? { alarm_gunler: n.alarm.gunler, alarm_saat_bas: n.alarm.bas, alarm_saat_bit: n.alarm.bit, alarm_tum_il: !!n.alarm.tumIl } : {}),
   }).eq("id", uid);
   if (error) throw error;
 }

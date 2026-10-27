@@ -892,6 +892,7 @@ export default function LiveApp() {
     const evId = d.event_id || d.eventId, chId = d.conversation_id || d.chatId;
     if (n.type === "teklif") { refreshOffers(); setView({ name: "teklifler" }); return; }
     if (n.type === "yoklama" && evId) { setTab("home"); setView({ name: "attendance", id: evId }); return; }
+    if (n.type === "alarm" && evId) { olay("alarm_acildi"); setTab("home"); setView({ name: "event", id: evId }); return; }
     if (n.type === "puanlama" && evId) { setTab("home"); setView({ name: "rate", id: evId }); return; }
     if (chId && chats.some((c) => c.id === chId)) { openChat(chId); return; }
     if (evId && events.some((e) => e.id === evId)) { setTab("home"); setView({ name: "event", id: evId }); return; }

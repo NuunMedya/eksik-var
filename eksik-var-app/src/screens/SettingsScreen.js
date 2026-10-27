@@ -245,7 +245,33 @@ export default function SettingsScreen({ settings, onChange, onBack, onDeleteAcc
           <Row icon="person-add-outline" title={t("Başvurular")} desc={t("Etkinliğine biri başvurunca")} value={notif.basvuru} onChange={(v) => setNotif({ basvuru: v })} />
           <Row icon="chatbubble-ellipses-outline" title={t("Mesajlar")} desc={t("Birebir ve grup mesajları")} value={notif.mesaj} onChange={(v) => setNotif({ mesaj: v })} />
           <Row icon="alarm-outline" title={t("Maç hatırlatmaları")} desc={t("Etkinlikten 2 saat önce")} value={notif.hatirlatma} onChange={(v) => setNotif({ hatirlatma: v })} />
-          <Row icon="location-outline" title={t("Yakınımda maç açılınca")} desc={t("İlçende mevkine uygun ilan açılınca, günde en fazla 2")} value={notif.yakin !== false} onChange={(v) => setNotif({ yakin: v })} />
+          <Row icon="flash-outline" title={t("Eksik Alarmı")} desc={t("İlçende, branşına ve mevkine uygun ilan açılınca anında haber ver (günde en fazla 2)")} value={notif.yakin !== false} onChange={(v) => setNotif({ yakin: v })} />
+          {notif.yakin !== false && (() => {
+            const al = notif.alarm || { gunler: [0, 1, 2, 3, 4, 5, 6], bas: 17, bit: 24, tumIl: false };
+            const setAl = (patch) => setNotif({ alarm: { ...al, ...patch } });
+            const GUN = [[1, "Pzt"], [2, "Sal"], [3, "Çar"], [4, "Per"], [5, "Cum"], [6, "Cmt"], [0, "Paz"]];
+            const SAAT = [[0, 24, "Her saat"], [17, 24, "Akşam (17–24)"], [9, 17, "Gündüz (9–17)"], [20, 24, "Geç (20–24)"]];
+            return (
+              <View style={{ paddingHorizontal: 14, paddingBottom: 12, gap: 10 }}>
+                <View>
+                  <Text style={{ fontSize: 11, fontWeight: "800", color: C.faint, marginBottom: 6 }}>{t("HANGİ GÜNLER")}</Text>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                    {GUN.map(([g, ad]) => <Chip key={g} label={ad} active={al.gunler.includes(g)} onPress={() => setAl({ gunler: al.gunler.includes(g) ? al.gunler.filter((x) => x !== g) : [...al.gunler, g] })} />)}
+                  </View>
+                </View>
+                <View>
+                  <Text style={{ fontSize: 11, fontWeight: "800", color: C.faint, marginBottom: 6 }}>{t("HANGİ SAATLER")}</Text>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                    {SAAT.map(([b1, b2, ad]) => <Chip key={ad} label={ad} active={al.bas === b1 && al.bit === b2} onPress={() => setAl({ bas: b1, bit: b2 })} />)}
+                  </View>
+                </View>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                  <Chip label={t("📍 Yalnız ilçem")} active={!al.tumIl} onPress={() => setAl({ tumIl: false })} />
+                  <Chip label={t("🏙️ Tüm il")} active={!!al.tumIl} onPress={() => setAl({ tumIl: true })} />
+                </View>
+              </View>
+            );
+          })()}
         </View>
 
         <Text style={st.section}>{t("GİZLİLİK")}</Text>
