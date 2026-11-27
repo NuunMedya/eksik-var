@@ -27,7 +27,7 @@ begin
          count(*) filter (where p.payment_status in ('odendi','muaf') and (p.payment_claimed_at is null or p.payment_claimed_at <= e.event_date + interval '3 days'))
     into o_pct, o_say
     from public.participants p join public.events e on e.id = p.event_id
-   where p.user_id = p_user and e.status = 'tamamlandi' and e.price_per_person > 0;
+   where p.user_id = p_user and e.status = 'tamamlandi' and e.price_per_person > 0 and p.attendance is distinct from 'gelmedi';
   select rating_avg into rating from public.users where id = p_user;
   if j + n >= 3 then
     puan := round(0.60 * (j * 100.0 / (j + n))
