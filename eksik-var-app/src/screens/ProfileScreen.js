@@ -5,7 +5,8 @@ import { t } from "../i18n";
 import { C, onThemeChange } from "../theme";
 import { MODE_LABEL, DEFAULT_SETTINGS } from "../data";
 import { badgesFor } from "../badges";
-import { AvatarPicker, RolRozeti } from "../components";
+import { guvenInfo } from "../data";
+import { AvatarPicker, RolRozeti, GuvenRozeti } from "../components";
 import { chooseAvatar } from "../avatar";
 
 export default function ProfileScreen({ user, pendingRate, onRate, onLogout, onSettings, onInvite, onAvatar, settings = DEFAULT_SETTINGS, events = [], team = null, onTeam = () => {}, marketMine = null, onMarket = () => {}, onOpenEvent = () => {}, onPositionsChange = () => {}, onEdit = () => {}, onBringTeam = () => {}, onBosSaat = () => {} }) {
@@ -19,7 +20,10 @@ export default function ProfileScreen({ user, pendingRate, onRate, onLogout, onS
           <Text style={{ color: C.mist, fontSize: 11, marginBottom: 4 }}>{t("Fotoğraf eklemek için dokun")}</Text>
         )}
         <Text style={{ color: "#fff", fontWeight: "900", fontSize: 19 }}>{user.name}</Text>
-        <RolRozeti user={user} light style={{ alignSelf: "center", marginTop: 4, marginBottom: 2 }} />
+        <View style={{ flexDirection: "row", justifyContent: "center", gap: 6, marginTop: 4, marginBottom: 2 }}>
+          <GuvenRozeti user={user} light />
+          <RolRozeti user={user} light />
+        </View>
         <Text style={{ color: C.mist, fontSize: 13 }}>
           @{user.username} · {user.district ? `${user.district}, ` : ""}{user.city}{user.level && user.level !== "Farketmez" ? ` · ${user.level}` : ""}
         </Text>
@@ -40,7 +44,7 @@ export default function ProfileScreen({ user, pendingRate, onRate, onLogout, onS
       <View style={st.statsRow}>
         {[
           { top: `★ ${user.rating}`, label: "Puan", sub: `${user.count} değerlendirme`, renk: C.star },
-          { top: `%${user.rel}`, label: "Güvenilirlik", sub: "katılım oranı", renk: C.pitch },
+          { top: guvenInfo(user).isNew ? "Yeni" : String(guvenInfo(user).puan), label: "Güven puanı", sub: user.odemePct != null ? `katılım %${user.rel} · ödeme %${Math.round(user.odemePct)}` : `katılım %${user.rel}`, renk: guvenInfo(user).isNew ? C.faint : guvenInfo(user).renk },
           { top: String(user.joined), label: "Katılım", sub: `${user.organized} organizasyon`, renk: C.kit },
         ].map((s, i) => (
           <View key={i} style={[st.statBox, { borderTopWidth: 3, borderTopColor: s.renk }]}>

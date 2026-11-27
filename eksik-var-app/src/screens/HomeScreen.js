@@ -8,7 +8,7 @@ import { t } from "../i18n";
 import { C, onThemeChange } from "../theme";
 import { CATEGORIES, GUNLER_UZUN, sortDistricts, needsSummary, venueModeLabel, costModeLabel, formatLabel, relInfo, relColor } from "../data";
 import { ILLER, ilceleri } from "../trIlIlce";
-import { Avatar, Stars, SquadDots, EksikBadge, Chip, PickerSheet } from "../components";
+import { Avatar, Stars, SquadDots, EksikBadge, Chip, PickerSheet, GuvenRozeti } from "../components";
 import MarketCard from "./MarketCard";
 import LigKart from "./LigKart";
 import BosSaatSerit from "./BosSaatSerit";
@@ -110,10 +110,7 @@ function EventCard({ ev, onOpen }) {
             <Avatar name={ev.org.name} size={22} />
             <Text style={{ fontSize: 12, fontWeight: "800", color: C.ink }}>{ev.org.name}</Text>
             <Stars value={ev.org.rating} size={10} />
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
-              <Ionicons name="shield-checkmark" size={11} color={C.pitch} />
-              <Text style={{ fontSize: 11, fontWeight: "700", color: C.pitch }}>{relInfo(ev.org).text}</Text>
-            </View>
+            <GuvenRozeti user={ev.org} small />
           </>
         )}
       </View>

@@ -23,7 +23,7 @@ export const fmtTime = (iso) => {
   return `${d.getDate()}.${pad(d.getMonth() + 1)}`;
 };
 
-const USER_COLS = "id, full_name, username, bio, skill_level, avatar_url, rating_avg, rating_count, reliability_pct, events_joined, events_organized, no_show_count, city_id, district_id, positions, fav_cat, fav_cats, cat_levels, team_name, mvp_count, is_verified, status, status_reason, suspended_until, contact_mode, contact_scope, quiet_enabled, quiet_start, quiet_end, notif_basvuru, notif_mesaj, notif_hatirlatma, notif_yakin, hesap_turu, hesap_onay, alarm_gunler, alarm_saat_bas, alarm_saat_bit, alarm_tum_il, cities(name), districts(name)";
+const USER_COLS = "id, full_name, username, bio, skill_level, avatar_url, rating_avg, rating_count, reliability_pct, events_joined, events_organized, no_show_count, city_id, district_id, positions, fav_cat, fav_cats, cat_levels, team_name, mvp_count, is_verified, status, status_reason, suspended_until, contact_mode, contact_scope, quiet_enabled, quiet_start, quiet_end, notif_basvuru, notif_mesaj, notif_hatirlatma, notif_yakin, hesap_turu, hesap_onay, alarm_gunler, alarm_saat_bas, alarm_saat_bit, alarm_tum_il, odeme_pct, odeme_sayisi, katilim_seri, guven_puani, kurucu, cities(name), districts(name)";
 
 export function mapUser(u) {
   if (!u) return null;
@@ -37,6 +37,7 @@ export function mapUser(u) {
     role: u.hesap_turu || "oyuncu", roleStatus: u.hesap_onay || "yok",
     verified: !!u.is_verified, status: u.status || "aktif", statusReason: u.status_reason || null, suspendedUntil: u.suspended_until || null,
     positions: u.positions || [], favCat: u.fav_cat || null, favCats: Array.isArray(u.fav_cats) ? u.fav_cats : [], catLevels: u.cat_levels || {}, teamName: u.team_name || null, mvpCount: u.mvp_count || 0,
+    guven: u.guven_puani ?? null, odemePct: u.odeme_pct != null ? Number(u.odeme_pct) : null, odemeSayisi: u.odeme_sayisi || 0, streak: u.katilim_seri || 0, founder: !!u.kurucu,
     bio: u.bio || "", level: LEVEL_TO_UI[u.skill_level] || "Farketmez",
     contact: {
       mode: u.contact_mode || "ikisi", scope: u.contact_scope || "herkes",
@@ -293,7 +294,7 @@ export async function deleteAccount() {
 }
 
 /* ---------- etkinlikler ---------- */
-const EVENT_COLS = "*, organizer:users!organizer_id(id, full_name, username, avatar_url, rating_avg, rating_count, reliability_pct, contact_mode, contact_scope, quiet_enabled, quiet_start, quiet_end), hakem:users!events_hakem_id_fkey(id, full_name, username, avatar_url), medya:users!events_medya_id_fkey(id, full_name, username, avatar_url), district:districts(name), city:cities(name)";
+const EVENT_COLS = "*, organizer:users!organizer_id(id, full_name, username, avatar_url, rating_avg, rating_count, reliability_pct, events_joined, no_show_count, guven_puani, kurucu, odeme_pct, contact_mode, contact_scope, quiet_enabled, quiet_start, quiet_end), hakem:users!events_hakem_id_fkey(id, full_name, username, avatar_url), medya:users!events_medya_id_fkey(id, full_name, username, avatar_url), district:districts(name), city:cities(name)";
 
 export async function listEvents(meId, cityId) {
   const since = new Date(Date.now() - 3 * 86400000).toISOString();

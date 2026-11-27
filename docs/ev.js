@@ -102,7 +102,7 @@
           "</div>" +
           '<div class="ev-pills" style="justify-content:center;margin-top:12px">' +
           '<span class="pill">' + esc(LEVEL[e.level] || "Her seviye") + "</span>" +
-          '<span class="pill">Organizatör: ' + esc(e.org) + (e.orgRel != null ? " · %" + esc(e.orgRel) + " güvenilir" : "") + "</span>" +
+          '<span class="pill">Organizatör: ' + esc(e.org) + (e.orgGuven != null ? " · 🛡️ güven " + esc(e.orgGuven) : e.orgRel != null ? " · %" + esc(e.orgRel) + " güvenilir" : "") + (e.orgKurucu ? " 🌱" : "") + "</span>" +
           (e.hakem ? '<span class="pill mor">🟣 Hakem aranıyor</span>' : "") + (e.medya ? '<span class="pill mor">🎥 Kameraman aranıyor</span>' : "") + "</div>" +
           '<p class="ev-cta-t">' + esc(basl) + "</p>" +
           '<a class="btn b1" href="eksikvar://e/' + esc(id) + '">Uygulamada aç ve katıl</a>' + indirDugmeleri() +

@@ -3,8 +3,8 @@ import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Sty
 import { Ionicons } from "@expo/vector-icons";
 import { t } from "../i18n";
 import { C, onThemeChange } from "../theme";
-import { Avatar, Stars, BACK_ICON, RolRozeti } from "../components";
-import { posLabel, relInfo, relColor, CATEGORIES, timeAgo } from "../data";
+import { Avatar, Stars, BACK_ICON, RolRozeti, GuvenRozeti } from "../components";
+import { posLabel, relInfo, relColor, guvenInfo, CATEGORIES, timeAgo } from "../data";
 import { earnedBadges } from "../badges";
 
 export default function UserProfileScreen({ user, comments = [], rules, blocked = false, loading = false,
@@ -31,7 +31,10 @@ export default function UserProfileScreen({ user, comments = [], rules, blocked 
         )}
         <Avatar name={user.name} uri={user.avatar} size={88} />
         <Text style={st.name}>{user.name}</Text>
-        <RolRozeti user={user} light style={{ alignSelf: "center", marginTop: 4, marginBottom: 2 }} />
+        <View style={{ flexDirection: "row", justifyContent: "center", gap: 6, marginTop: 4, marginBottom: 2 }}>
+          <GuvenRozeti user={user} light />
+          <RolRozeti user={user} light />
+        </View>
         <Text style={{ color: C.mist, fontSize: 13 }}>
           @{user.username}{user.city ? ` · ${user.district ? user.district + ", " : ""}${user.city}` : ""}{user.level && user.level !== "Farketmez" ? ` · ${user.level}` : ""}
         </Text>
@@ -62,9 +65,9 @@ export default function UserProfileScreen({ user, comments = [], rules, blocked 
             <Text style={st.statSub}>{user.count || 0} değerlendirme</Text>
           </View>
           <View style={st.statBox}>
-            <Ionicons name="shield-checkmark" size={16} color={relColor(user)} />
-            <Text style={[st.statBig, { color: relColor(user), fontSize: ri.isNew ? 13 : 17 }]}>{ri.text}</Text>
-            <Text style={st.statSub}>{ri.isNew ? "güvenilirlik (henüz yok)" : "güvenilirlik"}</Text>
+            <Ionicons name={guvenInfo(user).isNew ? "leaf-outline" : "shield-checkmark"} size={16} color={guvenInfo(user).renk} />
+            <Text style={[st.statBig, { color: guvenInfo(user).renk, fontSize: guvenInfo(user).isNew ? 13 : 17 }]}>{guvenInfo(user).isNew ? ri.text : guvenInfo(user).puan}</Text>
+            <Text style={st.statSub}>{guvenInfo(user).isNew ? "güven puanı (henüz yok)" : `güven · katılım %${ri.pct ?? user.rel}${user.odemePct != null ? ` · ödeme %${Math.round(user.odemePct)}` : ""}`}</Text>
           </View>
           <View style={st.statBox}>
             <Ionicons name="football-outline" size={16} color={C.turfText} />

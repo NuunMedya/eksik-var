@@ -13,6 +13,8 @@ export const BADGES = [
   { id: "seri10", icon: "🛡️", title: "Tam güven",   desc: "Üst üste 10 maç, sıfır kaçak",      value: (u) => num(u.streak), goal: 10 },
   { id: "mvp5",   icon: "🏆", title: "5× MVP",      desc: "5 kez maçın oyuncusu seçildi",      value: (u) => num(u.mvpCount), goal: 5 },
   { id: "org5",   icon: "📋", title: "Organizatör", desc: "5 maç organize etti",               value: (u) => num(u.organized), goal: 5 },
+  { id: "odeme10", icon: "💳", title: "Düzenli ödeyen", desc: "10 maçın parasını zamanında ödedi", value: (u) => num(u.odemeSayisi), goal: 10 },
+  { id: "guven90", icon: "🛡️", title: "Güven 90+",  desc: "Güven puanı 90'ın üzerine çıktı",  flag: (u) => num(u.guven) >= 90 },
   { id: "golcu",  icon: "⚽", title: "Golcü",       desc: "10 gol attı",                       value: (u) => num(u.totals && u.totals.goals), goal: 10 },
 ];
 

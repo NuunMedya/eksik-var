@@ -3,12 +3,26 @@ import { View, Text, TouchableOpacity, TextInput, Modal, FlatList, Image, StyleS
 import { Ionicons } from "@expo/vector-icons";
 import { t } from "./i18n";
 import { C, onThemeChange } from "./theme";
-import { initials, avatarBg } from "./data";
+import { initials, avatarBg, guvenInfo } from "./data";
 import { rolBilgi } from "./roller";
 
 /* ---------- Avatar ---------- */
 /* Hesap türü rozeti: işletme / organizatör / hakem / medya. Oyuncuda hiçbir şey çizmez.
    light: koyu zemin (profil başlığı) · small: ilan kartı kimlik satırı */
+/* Güven rozeti: 🛡️ 96 · Çok güvenilir (kurucu üye ise 🌱) — kartlarda small, profilde tam */
+export function GuvenRozeti({ user, small = false, light = false, style }) {
+  const g = guvenInfo(user || {});
+  const fg = light ? "#fff" : g.renk, bg = light ? "rgba(255,255,255,0.18)" : g.zemin;
+  return (
+    <View style={[{ flexDirection: "row", alignItems: "center", gap: 3, alignSelf: "flex-start", backgroundColor: bg, borderRadius: 999, paddingHorizontal: small ? 6 : 10, paddingVertical: small ? 2 : 4 }, style]}>
+      <Ionicons name={g.isNew ? "leaf-outline" : "shield-checkmark"} size={small ? 10 : 12} color={fg} />
+      <Text style={{ fontSize: small ? 10 : 11.5, fontWeight: "900", color: fg }}>{g.isNew ? t("Yeni") : g.text}</Text>
+      {!small && !g.isNew ? <Text style={{ fontSize: 11, fontWeight: "700", color: fg }}>· {t(g.etiket)}</Text> : null}
+      {user && user.founder ? <Text style={{ fontSize: small ? 9 : 11 }}>🌱</Text> : null}
+    </View>
+  );
+}
+
 export function RolRozeti({ user, light = false, small = false, style }) {
   const r = rolBilgi(user);
   if (!r) return null;

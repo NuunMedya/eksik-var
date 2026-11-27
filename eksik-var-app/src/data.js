@@ -676,6 +676,15 @@ export function relInfo(u) {
   const pct = Math.round(((joined + 4) / (total + 4)) * 100);
   return { pct, isNew: false, matches: total, text: `%${pct}` };
 }
+/* Güven puanı (sunucuda hesaplanır: katılım %60 + ödeme düzeni %25 + oyuncu puanı %15).
+   null → henüz yeterli maç yok ("Yeni"). Renk ve etiket tek yerden. */
+export function guvenInfo(u) {
+  const p = u && u.guven != null ? Number(u.guven) : null;
+  if (p == null) { const r = relInfo(u || {}); return { puan: null, etiket: "Yeni", renk: C.faint, zemin: C.chalk, isNew: true, text: r.isNew ? r.text : "Yeni" }; }
+  if (p >= 90) return { puan: p, etiket: "Çok güvenilir", renk: C.pitch, zemin: C.pitchSoft, isNew: false, text: `${p}` };
+  if (p >= 75) return { puan: p, etiket: "Güvenilir", renk: C.kit, zemin: C.kitSoft, isNew: false, text: `${p}` };
+  return { puan: p, etiket: "Dikkat", renk: C.danger, zemin: "rgba(208,74,74,0.12)", isNew: false, text: `${p}` };
+}
 export const relColor = (u) => { const r = relInfo(u); return r.isNew ? C.faint : r.pct < 85 ? C.kit : C.pitch; };
 
 export function buildTeamInvite(ev, user) {
