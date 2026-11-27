@@ -19,6 +19,7 @@ import { Linking, Modal, ScrollView, TextInput, KeyboardAvoidingView, Platform }
 import { t, onLangChange } from "../i18n";
 import { saveTheme, saveLang } from "../prefs";
 import { Toast, PickerSheet, Avatar } from "../components";
+import { usePrompt } from "../components/TextPromptModal";
 import { OfferSheet } from "../screens/sheets";
 import { Alert } from "react-native";
 import * as api from "./api";
@@ -327,6 +328,7 @@ export default function LiveApp() {
   const [call, setCall] = useState(null);
   const [memberSheet, setMemberSheet] = useState(null);
   const [toast, setToast] = useState(null);
+  const [promptEl, openPrompt] = usePrompt();
   const [blocked, setBlocked] = useState([]);
   const [ratedEvents, setRatedEvents] = useState([]);
   const [mvpVotes, setMvpVotes] = useState({});
@@ -829,7 +831,7 @@ export default function LiveApp() {
   const confirmPayment = async (eventId, userId, status) => { try { await api.confirmPayment(eventId, userId, status); await refreshEvents(); } catch (e) { fail(e); } };
   const sendIban = async (eventId) => { if (!paymentDetails) { showToast(t("Önce Ayarlar > Ödeme bilgileri'ne IBAN'ını yaz")); setView({ name: "settings" }); return; } try { await api.sendIban(eventId); await refreshChats(); showToast(t("IBAN gruba gönderildi 💳")); } catch (e) { fail(e); } };
   const remindPayments = async (eventId) => { try { const n = await api.remindPayments(eventId); await refreshEvents(); showToast(n ? `${n} kişiye hatırlatma gönderildi` : "Bekleyen ödeme yok ya da 24 saat dolmadı"); } catch (e) { fail(e); } };
-  const saveIban = async (d) => { try { await api.savePaymentDetails(meId, d); setPaymentDetails(d); showToast(t("Ödeme bilgilerin kaydedildi 💳")); } catch (e) { fail(e); } };
+  const saveIban = async (d) => { try { await api.savePaymentDetails(meId, d); setPaymentDetails(d); showToast(t("Ödeme bilgilerin kaydedildi 💳")); } catch (e) { fail(e); return false; } };
   const recordScore = async (eventId, home, away) => { try { await api.recordScore(eventId, home, away); await Promise.all([refreshEvents(), refreshChats()]); showToast(t("Skor kaydedildi · {p0} – {p1}", { p0: home, p1: away })); } catch (e) { fail(e); } };
   const submitRatings = async (eventId, ratings, mvpId = null) => {
     try {
@@ -1051,7 +1053,7 @@ export default function LiveApp() {
           {tab === "search" && !ustEkran && (
             <SearchScreen onSearchUsers={searchUsers} onSearchEvents={searchEvents} suggestions={suggestions}
               onCommentsPost={acYorumlar}
-              onEditPost={(p) => Alert.prompt ? Alert.prompt(t("Düzenle"), t("Açıklamayı güncelle"), [{ text: t("Vazgeç"), style: "cancel" }, { text: t("Kaydet"), onPress: async (v) => { try { await api.updatePostCaption(p.id, (v || "").trim()); refreshPosts(); showToast(t("Kaydedildi ✓")); } catch (e) { fail(e); } } }], "plain-text", p.caption || "") : showToast(t("Düzenleme iOS'ta"))}
+              onEditPost={(p) => openPrompt({ title: t("Düzenle"), message: t("Açıklamayı güncelle"), fields: [{ key: "caption", multiline: true, maxLength: 2200, initial: p.caption || "" }], onSubmit: async ({ caption }) => { try { await api.updatePostCaption(p.id, caption); refreshPosts(); showToast(t("Kaydedildi ✓")); } catch (e) { fail(e); throw e; } } })}
               onArchivePost={async (p) => { try { await api.archivePost(p.id); refreshPosts(); showToast(t("Arşivlendi 🗄")); } catch (e) { fail(e); } }}
               recent={recentSearches} onAddRecent={addRecent} onOpenUser={openProfile} onOpenEvent={openSearchedEvent}
               posts={posts} onLikePost={likePost} onDeletePost={removePost} onCompose={vitrinAtolyeAc} onOfferPost={teklifGonder} onMessagePost={async (p) => { try { const id = await api.openDirectChat(meId, p.userId); await refreshChats(); openChat(id); } catch (e) { fail(e); } }} cityName={user.city} />
@@ -1105,7 +1107,7 @@ export default function LiveApp() {
                 paymentDetails={paymentDetails} onSaveIban={saveIban}
                 onCalendar={calendarFor} onDirections={directionsFor} onAddGuest={addGuest} onUpdateNeeds={async (id, needs) => { try { await api.updateEventNeeds(id, needs); await refreshEvents(); showToast(t("İhtiyaç güncellendi \u2713")); } catch (e) { fail(e); } }}
                 onStopSeries={async (id) => { try { await api.stopSeries(id); await refreshEvents(); showToast(t("Seri durduruldu — bu hafta son \u23F9")); } catch (e) { fail(e); } }}
-                onUpdateDesc={async (id, d) => { try { await api.updateEventDesc(id, d); await refreshEvents(); showToast(t("Kaydedildi \u2713")); } catch (e) { fail(e); } }} onAddGuests={async (evId, list) => { const e = events.find((x) => x.id === evId); if (!e) return; try { for (const p of list) await api.addGuest(meId, e, p.name); await refreshEvents(); } catch (er) { fail(er); } }} onRepeat={(ev) => setView({ name: "create", repeat: true, initial: cloneForRepeat(ev) })} onRemoveGuest={removeGuest} onToggleGuest={toggleGuest}
+                onUpdateDesc={async (id, d) => { try { await api.updateEventDesc(id, d); await refreshEvents(); showToast(t("Kaydedildi \u2713")); } catch (e) { fail(e); return false; } }} onAddGuests={async (evId, list) => { const e = events.find((x) => x.id === evId); if (!e) return; try { for (const p of list) await api.addGuest(meId, e, p.name); await refreshEvents(); } catch (er) { fail(er); } }} onRepeat={(ev) => setView({ name: "create", repeat: true, initial: cloneForRepeat(ev) })} onRemoveGuest={removeGuest} onToggleGuest={toggleGuest}
                 onCheckIn={checkIn} disputes={disputes[activeEvent.id] || []} onFixAttendance={fixAttendance} onConfirmAllPayments={confirmAllPayments}
                 statRoster={rosterWithGuests(activeEvent)} onSetStat={setStat} onShareSummary={shareSummary}
                 checkinCode={checkinCodes[activeEvent.id] || null} onOpenCode={openCode} onCheckInWithCode={checkInWithCode}
@@ -1392,6 +1394,7 @@ export default function LiveApp() {
           <OdemeSheet visible={!!odemeEv} ev={odemeEv} amount={odemeEv && odemeEv.myPayment ? odemeEv.myPayment.amount : 0}
             onClose={() => setOdemeEv(null)} loadIban={api.organizerIban}
             onCopy={(v) => copyText(v)} onPickProof={pickPhoto} onClaim={odemeOnayla} />
+          {promptEl}
           <Toast text={toast} />
 
           {!hideTabs && (

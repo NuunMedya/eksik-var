@@ -6,6 +6,7 @@ import { C, onThemeChange } from "../theme";
 import { CATEGORIES, POSITIONS, GUNLER_UZUN, positionSlots, posLabel, posIcon, venueModeLabel, costModeLabel, teamLabel, VARMISIN_OPTIONS, PAYMENT_LABEL, paymentSummary, formatLabel, relInfo, eventPhase } from "../data";
 import { parseRoster } from "../roster";
 import { Avatar, Stars, SquadDots, EksikBadge, BACK_ICON } from "../components";
+import { usePrompt } from "../components/TextPromptModal";
 
 export default function EventDetailScreen({ onPinVenue = null, onUpdateDesc = null, onUpdateNeeds = null, onStopSeries = null, paymentDetails = null, onSaveIban = null,
   ev, apps, myApp, roster, onBack, onApply, onApprove, onReject, onGoChat, onAttendance, onDispute, onShare,
@@ -62,6 +63,8 @@ export default function EventDetailScreen({ onPinVenue = null, onUpdateDesc = nu
   const cat = CATEGORIES.find((c) => c.id === ev.cat);
   const remaining = ev.needed - ev.filled;
   const eventApps = apps.filter((a) => a.eventId === ev.id && a.who !== "me");
+
+  const [promptEl, openPrompt] = usePrompt();
 
   return (
     <View style={{ flex: 1, backgroundColor: C.chalk }}>
@@ -427,14 +430,14 @@ export default function EventDetailScreen({ onPinVenue = null, onUpdateDesc = nu
               <View style={{ marginTop: 8 }}>
                 {onSaveIban && (
                   <TouchableOpacity onPress={() => {
-                    Alert.prompt && Alert.prompt(t("Alıcı adı"), t("Dekontta görünecek ad soyad"), [
-                      { text: t("Vazgeç"), style: "cancel" },
-                      { text: t("Devam"), onPress: (ad) => Alert.prompt(t("IBAN"), "TR__ ____ ____ ____ ____ ____ __", [
-                        { text: t("Vazgeç"), style: "cancel" },
-                        { text: t("Kaydet"), onPress: (ib) => { const tmz = (ib || "").replace(/\s/g, "").toUpperCase(); if (tmz.length >= 15) onSaveIban({ iban: tmz, holder: (ad || "").trim() || null }); } },
-                      ], "plain-text", (paymentDetails && paymentDetails.iban) || ""),
-                      },
-                    ], "plain-text", (paymentDetails && paymentDetails.holder) || "");
+                    openPrompt({
+                      title: "💳 " + t("Ödeme bilgilerin"), message: t("Oyuncular payını bu hesaba gönderecek."),
+                      fields: [
+                        { key: "holder", label: t("Alıcı adı"), placeholder: t("Dekontta görünecek ad soyad"), initial: (paymentDetails && paymentDetails.holder) || "", autoCapitalize: "words" },
+                        { key: "iban", label: t("IBAN"), kind: "iban", required: true, initial: (paymentDetails && paymentDetails.iban) || "" },
+                      ],
+                      onSubmit: ({ holder, iban }) => onSaveIban({ iban, holder: holder || null }),
+                    });
                   }} style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: C.chalk, borderRadius: 12, padding: 10, marginBottom: 10 }}>
                     <Text style={{ fontSize: 15 }}>💳</Text>
                     {paymentDetails && paymentDetails.iban ? (
@@ -716,10 +719,11 @@ export default function EventDetailScreen({ onPinVenue = null, onUpdateDesc = nu
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <Text style={[st.cardTitle, { flex: 1 }]}>{t("AÇIKLAMA")}</Text>
               {ev.mine && onUpdateDesc && (
-                <TouchableOpacity onPress={() => Alert.prompt && Alert.prompt(t("Açıklamayı düzenle"), "", [
-                  { text: t("Vazgeç"), style: "cancel" },
-                  { text: t("Kaydet"), onPress: (v) => onUpdateDesc(ev.id, v || "") },
-                ], "plain-text", ev.desc || "")} style={{ padding: 4 }}>
+                <TouchableOpacity onPress={() => openPrompt({
+                  title: t("Açıklamayı düzenle"),
+                  fields: [{ key: "desc", multiline: true, maxLength: 1000, initial: ev.desc || "", placeholder: t("Saha, kurallar, buluşma noktası…") }],
+                  onSubmit: ({ desc }) => onUpdateDesc(ev.id, desc),
+                })} style={{ padding: 8 }} accessibilityLabel={t("Açıklamayı düzenle")}>
                   <Ionicons name="create-outline" size={16} color={C.turfText} />
                 </TouchableOpacity>
               )}
@@ -1012,6 +1016,7 @@ export default function EventDetailScreen({ onPinVenue = null, onUpdateDesc = nu
           )}
         </View>
       )}
+      {promptEl}
     </View>
   );
 }

@@ -21,6 +21,7 @@ import { Linking } from "react-native";
 import { t, onLangChange } from "./i18n";
 import { saveTheme, saveLang } from "./prefs";
 import { Toast, PickerSheet } from "./components";
+import { usePrompt } from "./components/TextPromptModal";
 import AuthScreen from "./screens/AuthScreen";
 import HomeScreen from "./screens/HomeScreen";
 import EventDetailScreen from "./screens/EventDetailScreen";
@@ -136,6 +137,7 @@ export default function DemoApp() {
   const [inviteTarget, setInviteTarget] = useState(null);     // davet edilecek kişi (etkinlik seçimi bekliyor)
   const [waitEvent, setWaitEvent] = useState(null);           // yedek olunacak etkinlik (mevki seçimi bekliyor)
   const [toast, setToast] = useState(null);
+  const [promptEl, openPrompt] = usePrompt();
   const [authError, setAuthError] = useState(null);
   const [onboarded, setOnboarded] = useState(false);
   const [settings, setSettings] = useState(DEFAULT_SETTINGS); // iletişim + bildirim tercihleri
@@ -934,7 +936,7 @@ export default function DemoApp() {
           {tab === "search" && !ustEkran && (
             <SearchScreen onSearchUsers={searchUsers} onSearchEvents={searchEvents} suggestions={suggestions}
               onCommentsPost={(p) => setYorumlar({ post: p, rows: demoYorum[p.id] || [], busy: false })}
-              onEditPost={(p) => Alert.prompt && Alert.prompt(t("Düzenle"), t("Açıklamayı güncelle"), [{ text: t("Vazgeç"), style: "cancel" }, { text: t("Kaydet"), onPress: (v) => setPosts((ps) => ps.map((pp) => pp.id === p.id ? { ...pp, caption: (v || "").trim() } : pp)) }], "plain-text", p.caption || "")}
+              onEditPost={(p) => openPrompt({ title: t("Düzenle"), message: t("Açıklamayı güncelle"), fields: [{ key: "caption", multiline: true, maxLength: 2200, initial: p.caption || "" }], onSubmit: ({ caption }) => setPosts((ps) => ps.map((pp) => pp.id === p.id ? { ...pp, caption } : pp)) })}
               onArchivePost={(p) => { setPosts((ps) => ps.filter((pp) => pp.id !== p.id)); showToast(t("Arşivlendi 🗄")); }}
               posts={posts} onLikePost={likePost} onDeletePost={removePost} onCompose={() => setComposer(true)}
               onOfferPost={() => showToast(t("💌 Teklif DM olarak iletildi (demo)"))}
@@ -1280,6 +1282,7 @@ export default function DemoApp() {
       )}
       <PostComposer visible={composer} onClose={() => setComposer(false)}
         hasListing={!!(myListing && myListing.active !== false)} onShare={sharePost} />
+      {promptEl}
       <Toast text={toast} />
 
           {/* alt sekme çubuğu */}

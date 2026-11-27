@@ -218,4 +218,16 @@ t("arena bankası ve mantığı", () => {
   assert.equal(ar.dogruMu(ar.SORULAR[0], ar.SORULAR[0].d), true);
   assert.equal(ar.dogruMu(ar.SORULAR[0], (ar.SORULAR[0].d + 1) % 4), false);
 });
+t("IBAN: mod-97, maske ve satır içi hata", () => {
+  assert.equal(d.ibanChecksumOk("TR33 0006 1005 1978 6457 8413 26"), true);   // geçerli örnek IBAN
+  assert.equal(d.ibanChecksumOk("TR34 0006 1005 1978 6457 8413 26"), false);  // kontrol hanesi bozuk
+  assert.equal(d.ibanChecksumOk("GB82WEST12345698765432"), true);             // harfli ülke kodu dönüşümü
+  assert.equal(d.maskIban("330006100519786457841326"), "TR33 0006 1005 1978 6457 8413 26");
+  assert.equal(d.maskIban("tr33 0006-1005"), "TR33 0006 1005");
+  assert.equal(d.maskIban(""), "TR"); assert.equal(d.maskIban("TR" + "1".repeat(40)).replace(/\s/g, "").length, 26);
+  assert.equal(d.ibanError("TR"), null); assert.equal(d.ibanError(""), null);
+  assert.match(d.ibanError("TR33 0006"), /26 karakter/);
+  assert.match(d.ibanError("TR34 0006 1005 1978 6457 8413 26"), /geçersiz/);
+  assert.equal(d.ibanError("TR33 0006 1005 1978 6457 8413 26"), null);
+});
 console.log(`\n${n} test geçti`);

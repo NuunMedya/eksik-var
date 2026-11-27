@@ -651,6 +651,32 @@ export function paymentSummary(list) {
 }
 export const isValidIban = (v) => /^TR\d{24}$/.test(String(v || "").replace(/\s/g, "").toUpperCase());
 export const formatIban = (v) => String(v || "").replace(/\s/g, "").toUpperCase().replace(/(.{4})/g, "$1 ").trim();
+/* IBAN mod-97 (ISO 13616): ilk 4 karakter sona, harfler A=10…Z=35, kalan 1 olmalı */
+export function ibanChecksumOk(v) {
+  const raw = String(v || "").replace(/\s/g, "").toUpperCase();
+  if (!/^[A-Z]{2}\d{2}[A-Z0-9]+$/.test(raw)) return false;
+  const moved = raw.slice(4) + raw.slice(0, 4);
+  let rem = 0;
+  for (const ch of moved) {
+    const n = /\d/.test(ch) ? ch : String(ch.charCodeAt(0) - 55);
+    for (const d of n) rem = (rem * 10 + Number(d)) % 97;
+  }
+  return rem === 1;
+}
+/* Giriş sırasında IBAN alanı: "TR" ön eki sabit, yalnız rakam, 4'lü gruplama (en çok 26 karakter) */
+export function maskIban(v) {
+  const digits = String(v || "").toUpperCase().replace(/^\s*T?R?/, "").replace(/\D/g, "").slice(0, 24);
+  return formatIban("TR" + digits);
+}
+/* Satır içi hata metni (null = geçerli). Boş IBAN ayrıca "zorunlu" kuralıyla ele alınır. */
+export function ibanError(v) {
+  const raw = String(v || "").replace(/\s/g, "").toUpperCase();
+  if (!raw || raw === "TR") return null;
+  if (!/^TR\d*$/.test(raw)) return "IBAN TR ile başlamalı ve yalnız rakam içermeli";
+  if (raw.length < 26) return `IBAN 26 karakter olmalı (${raw.length}/26)`;
+  if (!ibanChecksumOk(raw)) return "IBAN geçersiz — rakamları kontrol et";
+  return null;
+}
 
 /* ---------- spor formatları (kadro sayısı formattan gelir) ---------- */
 export const SPORT_FORMATS = {
