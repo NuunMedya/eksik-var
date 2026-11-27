@@ -39,7 +39,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "test": "bash test/e2e/run.sh"
+    "test": "node test/run.mjs && bash test/e2e/run.sh",
+    "lint": "expo lint"
   },
   "private": true,
   "devDependencies": {

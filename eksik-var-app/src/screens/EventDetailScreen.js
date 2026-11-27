@@ -999,6 +999,10 @@ export default function EventDetailScreen({ onPinVenue = null, onUpdateDesc = nu
             <TouchableOpacity onPress={() => onJoinWaitlist(ev.id)} style={[st.cta, { backgroundColor: C.kit }]}>
               <Text style={st.ctaText}>Yedek ol{ev.waitlistCount ? ` · ${ev.waitlistCount} yedek bekliyor` : ""}</Text>
             </TouchableOpacity>
+          ) : (ev.ended || ev.status === "tamamlandi") ? (
+            <View style={[st.cta, { backgroundColor: C.turf, opacity: 0.5 }]}>
+              <Text style={st.ctaText}>{t("Maç oynandı")}</Text>
+            </View>
           ) : ev.status === "doldu" ? (
             <View style={[st.cta, { backgroundColor: C.turf, opacity: 0.5 }]}>
               <Text style={st.ctaText}>{t("Kadro tamamlandı")}</Text>

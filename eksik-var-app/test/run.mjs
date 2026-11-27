@@ -218,4 +218,16 @@ t("arena bankası ve mantığı", () => {
   assert.equal(ar.dogruMu(ar.SORULAR[0], ar.SORULAR[0].d), true);
   assert.equal(ar.dogruMu(ar.SORULAR[0], (ar.SORULAR[0].d + 1) % 4), false);
 });
+t("kadro çözümleyici: Türkçe başlık satırları (maç, listesi) oyuncu sayılmaz", () => {
+  const p = ro.parseRoster("Pazar maç\nMaç günü\nKadro listesi\nYedekler:\n1. Ali ✅\n2- Maçka Veli\n3) Hasan (kaleci)");
+  assert.deepEqual(p.map((x) => x.name), ["Ali", "Maçka Veli", "Hasan"]);
+});
+t("initials: Türkçe büyük harf", () => {
+  assert.equal(d.initials("ismail kaya"), "İK"); assert.equal(d.initials("  ılgın  şen "), "IŞ");
+});
+t("isPastEvent: saati geçen maç", () => {
+  assert.equal(d.isPastEvent({ dateISO: "2000-01-01", time: "21:00" }), true);
+  assert.equal(d.isPastEvent({ dateISO: d.nextDates(3)[2].iso, time: "21:00" }), false);
+  assert.equal(d.isPastEvent({ ended: true }), true);
+});
 console.log(`\n${n} test geçti`);

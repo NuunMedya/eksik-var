@@ -8,7 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 import { C, onThemeChange } from "../theme";
-import { contactRules, DEFAULT_SETTINGS, buildShareText, buildInviteText, buildTeamInvite, extractIban, guestPlayers, buildMatchSummary, REPORT_REASONS, memberFromOrg, openPositions } from "../data";
+import { contactRules, DEFAULT_SETTINGS, buildShareText, buildInviteText, buildTeamInvite, extractIban, guestPlayers, buildMatchSummary, REPORT_REASONS, memberFromOrg, openPositions, isPastEvent } from "../data";
 import { useDeepLink, bekleyenDavet, davetTemizle } from "../deeplink";
 import { copyText } from "../clipboard";
 import { pickPhoto } from "../avatar";
@@ -419,14 +419,19 @@ export default function LiveApp() {
   const refreshApps = useCallback(async (uid) => { const id = uid || meId; if (id) { const a = await api.listApplications(id); setApps(a); return a; } return []; }, [meId]);
   const refreshChats = useCallback(async (uid, appList) => {
     const id = uid || meId; if (!id) return;
-    const myApps = (appList || apps).filter((a) => a.who === "me");
+    const myApps = (appList || appsRef.current).filter((a) => a.who === "me");
     setChats(await api.listChats(id, myApps));
-  }, [meId, apps]);
+  }, [meId]);
+  // Gerçek zamanlı abonelik yalnız meId değişince kurulur; içindeki işleyiciler
+  // en güncel listeye ve fonksiyonlara bu ref'lerden ulaşır (eski kapanım hatası).
+  const appsRef = useRef(apps); appsRef.current = apps;
+  const chatsRef = useRef(chats); chatsRef.current = chats;
+  const canliRef = useRef({}); canliRef.current = { refreshChats, refreshEvents, refreshPosts, refreshOffers };
 
   useEffect(() => {
     if (!session) { setMe(null); return; }
     (async () => {
-      try { const raw = await AsyncStorage.getItem("ev_cache"); if (raw) { const c = JSON.parse(raw); if (c.events) setEvents(c.events); if (c.chats) setChats(c.chats); } } catch { /* sessiz */ }
+      try { const raw = await AsyncStorage.getItem("ev_cache"); if (raw) { const c = JSON.parse(raw); if (c.events) setEvents(c.events.map((e) => ({ ...e, ended: isPastEvent(e) }))); if (c.chats) setChats(c.chats); } } catch { /* sessiz */ }
       try {
         const p = await loadProfile(session.user.id);
         const a = await refreshApps(p.id);
@@ -442,6 +447,12 @@ export default function LiveApp() {
     })();
   }, [session]);
 
+  // Uygulama açıkken başlama saati geçen maçlar "yaklaşan" listesinde kalmasın
+  useEffect(() => {
+    const iv = setInterval(() => setEvents((es) => (es.some((e) => !e.ended && isPastEvent(e)) ? es.map((e) => (e.ended || !isPastEvent(e) ? e : { ...e, ended: true })) : es)), 60000);
+    return () => clearInterval(iv);
+  }, []);
+
   /* ---------- gerçek zamanlı ---------- */
   useEffect(() => {
     if (!meId) return;
@@ -451,7 +462,7 @@ export default function LiveApp() {
         if (!r) return;
         if (p.eventType === "INSERT" && r.callee_id === meId && !r.ended_at) {
           const tumu = [];
-          chats.forEach((c) => { if (c.other) tumu.push(c.other); (c.members || []).forEach((m) => tumu.push(m)); });
+          chatsRef.current.forEach((c) => { if (c.other) tumu.push(c.other); (c.members || []).forEach((m) => tumu.push(m)); });
           const kisi = tumu.find((u) => u.id === r.caller_id);
           setCall({ callId: r.id, live: true, status: "gelen", name: (kisi && kisi.name) || t("Biri"), avatar: kisi && kisi.avatar });
         } else if (r.caller_id === meId || r.callee_id === meId) {
@@ -470,7 +481,7 @@ export default function LiveApp() {
       onMessage: (row) => {
         setChats((cs) => {
           const idx = cs.findIndex((c) => c.id === row.conversation_id);
-          if (idx < 0 || row.poll_id) { refreshChats(); return cs; }
+          if (idx < 0 || row.poll_id) { canliRef.current.refreshChats(); return cs; }
           const c = cs[idx];
           if (c.msgs.some((m) => m.dbId === row.id)) return cs;
           const senderName = (c.members || []).concat(c.other ? [c.other] : []).find((m) => m.id === row.sender_id);
@@ -485,6 +496,7 @@ export default function LiveApp() {
         });
       },
       onChange: async (what) => {
+        const { refreshChats, refreshEvents, refreshPosts, refreshOffers } = canliRef.current;
         if (what === "posts") { refreshPosts(); return; }
         if (what === "offers") { refreshOffers(); try { setNotifs(await api.listNotifications()); } catch { /* sessiz */ } return; }
         if (what === "chats") { if (chatDebounce.current) clearTimeout(chatDebounce.current); chatDebounce.current = setTimeout(async () => { try { await refreshChats(); await refreshEvents(); } catch { /* sessiz */ } }, 400); return; }
@@ -578,7 +590,10 @@ export default function LiveApp() {
   };
 
   /* ---------- akışlar ---------- */
+  const applyingRef = useRef(false);          // çift dokunuş kilidi (başvuru)
   const applyToEvent = async (ev, note, position = null) => {
+    if (applyingRef.current) return;
+    applyingRef.current = true;
     try {
       const r = await api.applyToEvent(meId, ev.id, note, position);
       olay("basvuru", { brans: ev.cat, mevki: position || null, ucretli: ev.price > 0 });
@@ -591,6 +606,7 @@ export default function LiveApp() {
       else { setView({ name: "root" }); }
       showToast(t("Başvurun iletildi 👋"));
     } catch (e) { fail(e); }
+    finally { applyingRef.current = false; }
   };
   const confirmJoin = async (appId) => {
     try { await api.setApplication(appId, { applicant_approved: true }); const a = await refreshApps(); await Promise.all([refreshEvents(), refreshChats(undefined, a)]); showToast(t("Kadrodasın 🎉")); setTimeout(askPush, 1200); }
@@ -638,7 +654,9 @@ export default function LiveApp() {
       if (selected) votes[optionId] = [...(votes[optionId] || []), { id: "me", name: me.name }];
       return { ...m, poll: { ...m.poll, votes } };
     }) }));
-    try { await api.vote(meId, pollId, optionId, selected); } catch (e) { fail(e); await refreshChats(); }
+    const c = chats.find((x) => x.id === chatId);
+    const pm = c && c.msgs.find((m) => m.poll && m.poll.id === pollId);
+    try { await api.vote(meId, pollId, optionId, selected, !!(pm && pm.poll.multiple)); } catch (e) { fail(e); await refreshChats(); }
   };
   const closePoll = async (chatId, pollId) => { try { await api.closePoll(pollId); await refreshChats(); showToast(t("Anket kapatıldı")); } catch (e) { fail(e); } };
 
@@ -829,10 +847,17 @@ export default function LiveApp() {
     if (c && c.type === "grup" && (c.seriesId || c.eventId)) api.seasonTable(meId, c.seriesId || c.eventId).then((rows) => setSeasons((x) => ({ ...x, [c.id]: rows })));
   }, [view]);  
 
+  const payingRef = useRef(false);
   const confirmAllPayments = (eventId) => {
     const ev = events.find((e) => e.id === eventId); const pend = ((ev && ev.payments) || []).filter((p) => p.status === "bekliyor" || p.status === "odedim");
     Alert.alert(t("Herkes ödedi"), `${pend.length} kişi 'ödendi' olarak işaretlenecek.`, [{ text: t("Vazgeç"), style: "cancel" }, { text: t("İşaretle"), onPress: async () => {
-      try { for (const p of pend) await api.confirmPayment(eventId, p.id, "odendi"); await refreshEvents(); showToast(t("Tüm ödemeler işaretlendi ✓")); } catch (e) { fail(e); }
+      if (payingRef.current) return; payingRef.current = true;
+      try {
+        const r = await Promise.allSettled(pend.map((p) => api.confirmPayment(eventId, p.id, "odendi")));
+        const hata = r.filter((x) => x.status === "rejected");
+        await refreshEvents().catch(() => {});
+        if (hata.length) fail(hata[0].reason); else showToast(t("Tüm ödemeler işaretlendi ✓"));
+      } finally { payingRef.current = false; }
     } }]);
   };
   const confirmPayment = async (eventId, userId, status) => { try { await api.confirmPayment(eventId, userId, status); await refreshEvents(); } catch (e) { fail(e); } };
@@ -851,8 +876,11 @@ export default function LiveApp() {
     } catch (e) { fail(e); }
   };
   const updateEvent = async (id, f) => {
+    if (creatingRef.current) return;
+    creatingRef.current = true;
     try { await api.updateEvent(id, f); await Promise.all([refreshEvents(), refreshChats()]); showToast(t("Değişiklikler kaydedildi · kadroya duyuruldu")); setView({ name: "event", id }); }
     catch (e) { fail(e); }
+    finally { creatingRef.current = false; }
   };
   const cancelEvent = (id) => {
     const ev = events.find((e) => e.id === id); if (!ev) return;
