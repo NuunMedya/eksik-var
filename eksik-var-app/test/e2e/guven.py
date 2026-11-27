@@ -2,8 +2,8 @@ import sys, os, datetime
 sys.path.insert(0, os.path.dirname(__file__))
 from _ortak import *
 
-def gecmis(saat):
-    return (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=saat)).isoformat().replace("+00:00","Z")
+def gecmis(dk):
+    return (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(minutes=dk)).isoformat().replace("+00:00","Z")
 
 print("1) Hesaplar")
 oT,oId=kayit(None,"Guven Org","gorg"); pT,pId=kayit(None,"Guven Oyuncu","goyn")
@@ -16,7 +16,7 @@ check("kendi puanını elle değiştiremez", u[0]["guven_puani"] is None and u[0
 
 print("2) 3 geçmiş ücretli maç: en eskisinde gelmedi, sonraki ikisinde katıldı + ödedi")
 evs=[]
-for i,(saat,att,pay) in enumerate([(72,"gelmedi",None),(48,"katildi","odendi"),(24,"katildi","odendi")]):
+for i,(saat,att,pay) in enumerate([(50,"gelmedi",None),(40,"katildi","odendi"),(30,"katildi","odendi")]):
     s,ev=req("POST","/rest/v1/events",{"organizer_id":oId,"category_id":1,"city_id":6,"title":f"Guven {i}","venue_name":"S","event_date":gecmis(saat),"total_capacity":10,"needed_count":3,"price_per_person":100,"skill_level":"farketmez","kind":"oyuncu"},oT,"return=representation")
     if s!=201: print("  ilan açılamadı", s, ev); sys.exit(1)
     evId=ev[0]["id"]; evs.append(evId)

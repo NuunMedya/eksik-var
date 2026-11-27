@@ -10,7 +10,7 @@ create or replace function public.koru_davet() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
   if coalesce(current_setting('eksik.davet_ic', true), '') <> '1'
-     and current_setting('request.jwt.claim.role', true) = 'authenticated' and auth.uid() = new.id then
+     and auth.uid() is not null and auth.uid() = new.id then
     new.davet_eden := old.davet_eden; new.davet_sayisi := old.davet_sayisi;
   end if;
   return new;
