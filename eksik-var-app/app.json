@@ -8,6 +8,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.nuunmedya.eksikvar",
       "buildNumber": "4",
       "associatedDomains": [
         "applinks:eksikvarapp.com"
@@ -15,11 +16,12 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Profil fotoğrafı ve dekont için kamera kullanılır.",
         "NSPhotoLibraryUsageDescription": "Profil fotoğrafı, ilan görseli ve dekont seçmek için galeriye erişilir.",
-        "NSMicrophoneUsageDescription": "Uygulama içi sesli arama için mikrofon kullanılır.",
+        "NSMicrophoneUsageDescription": "Sohbette sesli mesaj kaydetmek için mikrofon kullanılır.",
         "NSLocationWhenInUseUsageDescription": "Yakınındaki maçları ve sahaları göstermek için konum kullanılır."
       }
     },
     "android": {
+      "package": "com.nuunmedya.eksikvar",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -50,7 +52,12 @@
     },
     "plugins": [
       "expo-status-bar",
-      "expo-audio",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Sohbette sesli mesaj kaydetmek için mikrofon kullanılır."
+        }
+      ],
       "expo-sharing",
       "expo-video",
       "expo-font",
