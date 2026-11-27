@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { t } from "../i18n";
 import { C, onThemeChange } from "../theme";
 import { CATEGORIES } from "../data";
+import { usePrompt } from "../components/TextPromptModal";
 
 /* Sahalar 2.0 — tam ekran harita: branş çipleri, arama, 📍 konum, alt saha kartı,
    uzun-basışla saha ekleme. props sözleşmesi korunur:
@@ -28,6 +29,7 @@ export default function VenueSheet({ cat = null, onCat = null, visible, onClose,
   const [merkezV, setMerkezV] = useState(null);
   const [benim, setBenim] = useState(null);
   const mapRef = useRef(null);
+  const [promptEl, openPrompt] = usePrompt();
   const gorunen = q.trim()
     ? rows.filter((v) => (v.name || "").toLocaleLowerCase("tr").includes(q.trim().toLocaleLowerCase("tr")))
     : rows;
@@ -79,10 +81,10 @@ export default function VenueSheet({ cat = null, onCat = null, visible, onClose,
 
   const noktayaEkle = (latitude, longitude) => {
     if (!onAdd) return;
-    Alert.prompt && Alert.prompt("📍 " + t("Yeni saha"), t("Bu noktadaki sahanın adını yaz — ortak havuza eklenir."), [
-      { text: t("Vazgeç"), style: "cancel" },
-      { text: t("Ekle"), onPress: async (ad) => {
-        const isim = (ad || "").trim(); if (isim.length < 3) return;
+    openPrompt({
+      title: "📍 " + t("Yeni saha"), message: t("Bu noktadaki sahanın adını yaz — ortak havuza eklenir."), confirmText: t("Ekle"),
+      fields: [{ key: "ad", label: t("Saha adı"), placeholder: t("Örn. Yıldız Halı Saha"), required: true, minLength: 3, maxLength: 80, autoCapitalize: "words" }],
+      onSubmit: async ({ ad: isim }) => {
         try {
           const v = await onAdd(isim, latitude, longitude);
           if (v && isFinite(Number(v.lat))) {
@@ -93,10 +95,10 @@ export default function VenueSheet({ cat = null, onCat = null, visible, onClose,
             setSecili(yeni);
           }
         } catch (e) {
-          Alert.alert("📍 " + t("Saha eklenemedi"), (e && e.message) || t("Bilinmeyen hata — tekrar dener misin?"));
+          throw new Error((e && e.message) || t("Saha eklenemedi — tekrar dener misin?"));
         }
-      } },
-    ], "plain-text");
+      },
+    });
   };
   const sahaEkle = (e) => noktayaEkle(e.nativeEvent.coordinate.latitude, e.nativeEvent.coordinate.longitude);
 
@@ -215,18 +217,18 @@ export default function VenueSheet({ cat = null, onCat = null, visible, onClose,
         {/* elle yazma kapısı (yalnız seçici modda) */}
         {onPick && (
           <TouchableOpacity onPress={() => {
-            Alert.prompt && Alert.prompt("✍️ " + t("Saha adını yaz"),
-              t("Haritada bulamadıysan adıyla kaydet — konumu daha sonra uzun-basışla iğnelenebilir."), [
-              { text: t("Vazgeç"), style: "cancel" },
-              { text: t("Kaydet ve seç"), onPress: async (ad) => {
-                const isim = (ad || "").trim(); if (isim.length < 3) return;
-                try {
-                  const v = onAdd ? await onAdd(isim, null, null) : { name: isim };
-                  onPick({ name: (v && v.name) || isim, lat: v && isFinite(Number(v.lat)) ? Number(v.lat) : null, lng: v && isFinite(Number(v.lng)) ? Number(v.lng) : null, venueId: (v && v.id) || null });
-                  onClose();
-                } catch (e) { Alert.alert("📍 " + t("Saha eklenemedi"), (e && e.message) || ""); }
-              } },
-            ], "plain-text");
+            openPrompt({
+              title: "✍️ " + t("Saha adını yaz"), confirmText: t("Kaydet ve seç"),
+              message: t("Haritada bulamadıysan adıyla kaydet — konumu daha sonra uzun-basışla iğnelenebilir."),
+              fields: [{ key: "ad", label: t("Saha adı"), placeholder: t("Örn. Yıldız Halı Saha"), required: true, minLength: 3, maxLength: 80, autoCapitalize: "words" }],
+              onSubmit: async ({ ad: isim }) => {
+                let v;
+                try { v = onAdd ? await onAdd(isim, null, null) : { name: isim }; }
+                catch (e) { throw new Error((e && e.message) || t("Saha eklenemedi — tekrar dener misin?")); }
+                onPick({ name: (v && v.name) || isim, lat: v && isFinite(Number(v.lat)) ? Number(v.lat) : null, lng: v && isFinite(Number(v.lng)) ? Number(v.lng) : null, venueId: (v && v.id) || null });
+                onClose();
+              },
+            });
           }} style={st.elleBar}>
             <Text style={{ fontSize: 12.5, fontWeight: "800", color: C.turfText }}>{t("Sahayı bulamadın mı?")} <Text style={{ fontWeight: "900" }}>✍️ {t("Adını elle yaz")}</Text></Text>
           </TouchableOpacity>
@@ -298,6 +300,7 @@ export default function VenueSheet({ cat = null, onCat = null, visible, onClose,
           </View>
         )}
       </View>
+      {promptEl}
     </Modal>
   );
 }
