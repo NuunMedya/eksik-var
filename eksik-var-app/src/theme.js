@@ -4,28 +4,29 @@ let Appearance = null;
 try { Appearance = typeof require === "function" ? require("react-native").Appearance : null; } catch { Appearance = null; }
 
 export const LIGHT = {
-  turf: "#0B3D2E", turfLight: "#125A3F", turfText: "#0B3D2E",
-  pitch: "#17994F", pitchSoft: "#E3F4EA", pitchDark: "#123B26",
-  chalk: "#F7F6F2",            // uygulama zemini
+  // "Gece maçı" paleti: antrasit-lacivert, elektrik yeşili, çelik mavisi. Krem/turuncu yok.
+  turf: "#0B1220", turfLight: "#1A2438", turfText: "#0B1220",
+  pitch: "#0FA958", pitchSoft: "#DCF3E5", pitchDark: "#0B1220",
+  chalk: "#EEF1F5",            // uygulama zemini (soğuk çelik grisi)
   surface: "#FFFFFF",          // kart / giriş kutusu yüzeyi
-  kit: "#F4600C", kitSoft: "#FFEDE0",
+  kit: "#2563EB", kitSoft: "#DCE7FF",   // ikincil vurgu: elektrik mavisi
   star: "#F5B301",
-  ink: "#14201B", faint: "#5E6E66", line: "#E8E5DD",
-  waBg: "#ECE5DD", waMine: "#D9FDD3", waNotice: "#FCF4DB",
-  mist: "#BFD9CC", gray: "#A8B3AC", danger: "#B4232A",
-  placeholder: "#9AA79F", isDark: false,
+  ink: "#0B1220", faint: "#5B6572", line: "#D7DDE6",
+  waBg: "#E6EAF0", waMine: "#DCF3E5", waNotice: "#E8EDF5",
+  mist: "#9FB3C8", gray: "#94A3B8", danger: "#DC2626",
+  placeholder: "#94A3B8", isDark: false,
 };
 export const DARK = {
-  turf: "#0B3D2E", turfLight: "#125A3F", turfText: "#8FE0B2",
-  pitch: "#22B45D", pitchSoft: "#173B2A", pitchDark: "#0B2818",
-  chalk: "#0F1613",
-  surface: "#1A2420",
-  kit: "#FF7A2E", kitSoft: "#3A2415",
+  turf: "#05080F", turfLight: "#141C2B", turfText: "#5EE39A",
+  pitch: "#22D36B", pitchSoft: "#0F2A1C", pitchDark: "#05080F",
+  chalk: "#090D14",
+  surface: "#121826",
+  kit: "#4F8BFF", kitSoft: "#132446",
   star: "#F5B301",
-  ink: "#EEF3EF", faint: "#9DB0A5", line: "#2A3833",
-  waBg: "#0F1613", waMine: "#1F3D2C", waNotice: "#2E2A1A",
-  mist: "#BFD9CC", gray: "#6E7C75", danger: "#FF6B6B",
-  placeholder: "#6E7C75", isDark: true,
+  ink: "#E6EAF0", faint: "#94A3B8", line: "#1F2937",
+  waBg: "#090D14", waMine: "#0F2A1C", waNotice: "#1A2233",
+  mist: "#9FB3C8", gray: "#64748B", danger: "#FF6B6B",
+  placeholder: "#64748B", isDark: true,
 };
 
 export const C = { ...LIGHT };
