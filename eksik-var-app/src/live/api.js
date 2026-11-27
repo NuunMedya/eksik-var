@@ -826,11 +826,16 @@ export async function openDirectChat(meId, otherId) {
   return c.id;
 }
 export async function removeMember(eventId, conversationId, userId) {
-  if (eventId) { const { error } = await supabase.from("participants").delete().eq("event_id", eventId).eq("user_id", userId); if (error) throw error; }
+  let silindi = 0;
+  if (eventId) {
+    // trg_participant_after_delete grup üyeliğini de siler; bu yüzden katılımcı silindiyse işlem başarılıdır
+    const { data, error } = await supabase.from("participants").delete().eq("event_id", eventId).eq("user_id", userId).select("user_id");
+    if (error) throw error; silindi += (data || []).length;
+  }
   const { data, error } = await supabase.from("conversation_members").delete().eq("conversation_id", conversationId).eq("user_id", userId).select("user_id");
-  if (error) throw error;
+  if (error) throw error; silindi += (data || []).length;
   // RLS satırı sessizce eleyebilir: hiçbir şey silinmediyse başarı gösterme
-  if (!data || !data.length) throw new Error("Bu üyeyi çıkarma yetkin yok ya da üye zaten grupta değil");
+  if (!silindi) throw new Error("Bu üyeyi çıkarma yetkin yok ya da üye zaten grupta değil");
 }
 
 /* ---------- yoklama ---------- */
@@ -1023,7 +1028,16 @@ export async function createPoll(conversationId, question, options, multiple) {
 // poll_votes birincil anahtarı (poll_id, user_id, option_id); (poll_id, user_id) üzerinde tekil kısıt
 // yok, bu yüzden eski upsert(onConflict:"poll_id,user_id") her oyda 42P10 hatası veriyordu.
 // Tek seçimli ankette önce eski oy silinir, sonra yenisi eklenir (UPDATE politikası da yok).
-export async function vote(meId, pollId, optionId, selected, multiple = false) {
+// Aynı ankete art arda dokunuşlar sıraya alınır: iki sil+ekle iç içe geçerse tek seçimli ankette iki oy kalabilirdi.
+const oySirasi = new Map();
+export function vote(meId, pollId, optionId, selected, multiple = false) {
+  const once = oySirasi.get(pollId) || Promise.resolve();
+  const bu = once.catch(() => {}).then(() => oyYaz(meId, pollId, optionId, selected, multiple));
+  oySirasi.set(pollId, bu);
+  bu.finally(() => { if (oySirasi.get(pollId) === bu) oySirasi.delete(pollId); }).catch(() => {});
+  return bu;
+}
+async function oyYaz(meId, pollId, optionId, selected, multiple) {
   const t = () => supabase.from("poll_votes");
   if (!selected) {
     const { error } = await t().delete().eq("poll_id", pollId).eq("user_id", meId).eq("option_id", optionId);
