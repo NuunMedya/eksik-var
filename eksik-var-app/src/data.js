@@ -262,7 +262,7 @@ export const nowTime = () =>
 export const uid = () => Math.random().toString(36).slice(2, 9);
 
 export const initials = (name) =>
-  (name || "?").split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+  (name || "?").trim().split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toLocaleUpperCase("tr");
 
 const AVATAR_BG = ["#0B3D2E", "#1D5FBF", "#7C3AED", "#B4232A", "#B45309"];
 export const avatarBg = (name) =>
@@ -319,6 +319,8 @@ export const GUNLER_UZUN = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşe
 export const AYLAR = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
 
 const pad = (n) => String(n).padStart(2, "0");
+// Maç saati geçti mi? (önbellekten gelen ya da uygulama açıkken saati geçen ilanlar için)
+export const isPastEvent = (e) => !!e && (!!e.ended || (!!e.dateISO && !!e.time && new Date(`${e.dateISO}T${e.time}:00`) < new Date()));
 export const toDateISO = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 export const addDays = (iso, n) => { const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + n); return toDateISO(d); };
 // Tekrarla: aynı haftanın günü, bugünden sonraki ilk tarih

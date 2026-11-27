@@ -567,7 +567,7 @@ begin
     insert into public.participants (event_id, user_id, position)
     values (new.event_id, new.applicant_id, new.position) on conflict do nothing;
     insert into public.notifications (user_id, type, title, body, data)
-    values (new.applicant_id, 'onay', 'Kadrodasın 🎉', e.title || ' · ' || to_char(e.event_date, 'DD.MM HH24:MI'),
+    values (new.applicant_id, 'onay', 'Kadrodasın 🎉', e.title || ' · ' || to_char(e.event_date at time zone 'Europe/Istanbul', 'DD.MM HH24:MI'),
             jsonb_build_object('eventId', e.id));
   elsif new.status = 'reddedildi' and old.status <> 'reddedildi' then
     insert into public.notifications (user_id, type, title, body, data)
@@ -868,11 +868,11 @@ begin
    where type = 'grup' and (event_id = p_event or (series_id is not null and series_id = e.series_id)) limit 1;
   if v_conv is null then perform public.hata('grup_yok'); end if;
   insert into public.polls (conversation_id, event_id, kind, question, options, multiple, created_by)
-  values (v_conv, p_event, 'varmisin', 'Bu hafta var mısın? · ' || to_char(e.event_date, 'DD.MM HH24:MI'),
+  values (v_conv, p_event, 'varmisin', 'Bu hafta var mısın? · ' || to_char(e.event_date at time zone 'Europe/Istanbul', 'DD.MM HH24:MI'),
           '[{"id":"varim","text":"Varım ✅"},{"id":"yokum","text":"Yokum ❌"},{"id":"belirsiz","text":"Belli değil 🤔"}]'::jsonb,
           false, auth.uid()) returning id into v_poll;
   insert into public.messages (conversation_id, sender_id, type, content, poll_id)
-  values (v_conv, auth.uid(), 'metin', '📊 Bu hafta var mısın? · ' || to_char(e.event_date, 'DD.MM HH24:MI'), v_poll);
+  values (v_conv, auth.uid(), 'metin', '📊 Bu hafta var mısın? · ' || to_char(e.event_date at time zone 'Europe/Istanbul', 'DD.MM HH24:MI'), v_poll);
   update public.events set availability_asked_at = now(), availability_poll_id = v_poll where id = p_event;
   return v_poll;
 end $$;

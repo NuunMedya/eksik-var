@@ -11,16 +11,25 @@ const LEVEL_TO_DB = { Farketmez: "farketmez", Başlangıç: "baslangic", Orta: "
 const pad = (n) => String(n).padStart(2, "0");
 const hhmm = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
+// Takvim günü farkı (geçen saat değil): Salı 23:00'teki mesaj Perşembe 08:00'de "Dün" değil "Sal" görünür.
+const gun0 = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
 export const fmtTime = (iso) => {
   if (!iso) return "";
   const d = new Date(iso);
-  const now = new Date();
-  const sameDay = d.toDateString() === now.toDateString();
-  if (sameDay) return hhmm(d);
-  const diff = (now - d) / 86400000;
-  if (diff < 1.5) return "Dün";
-  if (diff < 7) return ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"][d.getDay()];
+  const fark = Math.round((gun0(new Date()) - gun0(d)) / 86400000);
+  if (fark === 0) return hhmm(d);
+  if (fark === 1) return "Dün";
+  if (fark > 1 && fark < 7) return ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"][d.getDay()];
   return `${d.getDate()}.${pad(d.getMonth() + 1)}`;
+};
+// Gelecekteki bir son saat için: "23:30" ya da "Yarın 01:00" (fmtTime geçmiş içindir)
+export const fmtDeadline = (iso) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const fark = Math.round((gun0(d) - gun0(new Date())) / 86400000);
+  if (fark <= 0) return hhmm(d);
+  if (fark === 1) return "Yarın " + hhmm(d);
+  return `${d.getDate()}.${pad(d.getMonth() + 1)} ${hhmm(d)}`;
 };
 
 const USER_COLS = "id, full_name, username, bio, skill_level, avatar_url, rating_avg, rating_count, reliability_pct, events_joined, events_organized, no_show_count, city_id, district_id, positions, fav_cat, fav_cats, cat_levels, team_name, mvp_count, is_verified, status, status_reason, suspended_until, contact_mode, contact_scope, quiet_enabled, quiet_start, quiet_end, notif_basvuru, notif_mesaj, notif_hatirlatma, notif_yakin, hesap_turu, hesap_onay, alarm_gunler, alarm_saat_bas, alarm_saat_bit, alarm_tum_il, odeme_pct, odeme_sayisi, katilim_seri, guven_puani, kurucu, davet_sayisi, cities(name), districts(name)";
@@ -97,7 +106,7 @@ export function mapApplication(a, meId) {
   return {
     id: a.id, eventId: a.event_id, conversationId: a.conversation_id,
     who: a.applicant_id === meId ? "me" : mapUser(a.applicant), position: a.position || null, invited: !!a.invited_by,
-    fromWaitlist: !!a.from_waitlist, offerExpiresAt: a.offer_expires_at ? fmtTime(a.offer_expires_at) : null,
+    fromWaitlist: !!a.from_waitlist, offerExpiresAt: a.offer_expires_at ? fmtDeadline(a.offer_expires_at) : null,
     note: a.message || "", status: mapApplicationStatus(a),
     organizerApproved: !!a.organizer_approved, applicantApproved: !!a.applicant_approved,
   };
@@ -383,8 +392,8 @@ export async function createEvent(meId, f) {
     venue_lat: f.venueLat ?? null, venue_lng: f.venueLng ?? null,
     gorev_hakem: !!f.gorevHakem, gorev_medya: !!f.gorevMedya,
   }).select("id").single();
-  if (f.kind === "rakip" && f.teamName) await supabase.from("users").update({ team_name: f.teamName }).eq("id", meId);
   if (error) throw error;
+  if (f.kind === "rakip" && f.teamName) await supabase.from("users").update({ team_name: f.teamName }).eq("id", meId);
   return data.id;
 }
 
@@ -428,10 +437,11 @@ export async function listChats(meId, myApps) {
     });
   }
   const ctx = { meId, myApps, participantsByEvent, polls };
-  return data.map((c) => mapChat(c, ctx)).sort((a, b) => {
-    const la = a.msgs.length ? a.msgs[a.msgs.length - 1].dbId || 0 : 0, lb = b.msgs.length ? b.msgs[b.msgs.length - 1].dbId || 0 : 0;
-    return lb - la;
-  });
+  // Onay kartı (dbId'siz sahte mesaj) sona eklenir; sıralama son GERÇEK mesaja göre yapılır,
+  // yoksa "onayla" bekleyen sohbet listenin dibine düşer.
+  const sonId = (c) => { for (let i = c.msgs.length - 1; i >= 0; i--) if (c.msgs[i].dbId) return c.msgs[i].dbId; return 0; };
+  const bekleyen = (c) => (c.msgs.some((m) => m.from === "approval") ? 1 : 0);
+  return data.map((c) => mapChat(c, ctx)).sort((a, b) => bekleyen(b) - bekleyen(a) || sonId(b) - sonId(a));
 }
 /* ---------- takım + teklifler + kulüp ---------- */
 export async function myTeam(meId) {
@@ -518,7 +528,7 @@ export async function updateEventNeeds(id, needs) {
   if (error) throw error;
 }
 export async function stopSeries(id) {
-  const bugun = new Date().toISOString().slice(0, 10);
+  const bugun = toDateISO(new Date());   // yerel gün (UTC değil: 00:00–03:00 arası dünü yazıyordu)
   const { error } = await supabase.from("events").update({ recurrence_until: bugun }).eq("id", id);
   if (error) throw error;
 }
@@ -816,8 +826,11 @@ export async function openDirectChat(meId, otherId) {
   return c.id;
 }
 export async function removeMember(eventId, conversationId, userId) {
-  await supabase.from("participants").delete().eq("event_id", eventId).eq("user_id", userId);
-  await supabase.from("conversation_members").delete().eq("conversation_id", conversationId).eq("user_id", userId);
+  if (eventId) { const { error } = await supabase.from("participants").delete().eq("event_id", eventId).eq("user_id", userId); if (error) throw error; }
+  const { data, error } = await supabase.from("conversation_members").delete().eq("conversation_id", conversationId).eq("user_id", userId).select("user_id");
+  if (error) throw error;
+  // RLS satırı sessizce eleyebilir: hiçbir şey silinmediyse başarı gösterme
+  if (!data || !data.length) throw new Error("Bu üyeyi çıkarma yetkin yok ya da üye zaten grupta değil");
 }
 
 /* ---------- yoklama ---------- */
@@ -960,7 +973,8 @@ export async function getPublicProfile(userId) {
 }
 
 /* ---------- arama ---------- */
-const esc = (t) => String(t).replace(/[%_,]/g, "");
+// PostgREST .or() sözdizimini bozan karakterler: , ( ) " \ ve ilike jokerleri
+const esc = (t) => String(t).replace(/[%_,()"\\]/g, "");
 export async function searchUsers(term) {
   const t = esc(term);
   const { data, error } = await supabase.from("users").select(USER_COLS)
@@ -1006,12 +1020,21 @@ export async function createPoll(conversationId, question, options, multiple) {
   if (error) throw error;
   return data;
 }
-export async function vote(meId, pollId, optionId, selected) {
-  const q = selected
-    ? supabase.from("poll_votes").upsert({ poll_id: pollId, user_id: meId, option_id: optionId }, { onConflict: "poll_id,user_id" })
-    : supabase.from("poll_votes").delete().eq("poll_id", pollId).eq("user_id", meId).eq("option_id", optionId);
-  const { error } = await q;
-  if (error) throw error;
+// poll_votes birincil anahtarı (poll_id, user_id, option_id); (poll_id, user_id) üzerinde tekil kısıt
+// yok, bu yüzden eski upsert(onConflict:"poll_id,user_id") her oyda 42P10 hatası veriyordu.
+// Tek seçimli ankette önce eski oy silinir, sonra yenisi eklenir (UPDATE politikası da yok).
+export async function vote(meId, pollId, optionId, selected, multiple = false) {
+  const t = () => supabase.from("poll_votes");
+  if (!selected) {
+    const { error } = await t().delete().eq("poll_id", pollId).eq("user_id", meId).eq("option_id", optionId);
+    if (error) throw error; return;
+  }
+  if (!multiple) {
+    const { error } = await t().delete().eq("poll_id", pollId).eq("user_id", meId).neq("option_id", optionId);
+    if (error) throw error;
+  }
+  const { error } = await t().insert({ poll_id: pollId, user_id: meId, option_id: optionId });
+  if (error && error.code !== "23505") throw error;   // aynı seçenek zaten seçiliyse sorun değil
 }
 export async function closePoll(pollId) {
   const { error } = await supabase.from("polls").update({ closed_at: new Date().toISOString() }).eq("id", pollId);
@@ -1178,7 +1201,7 @@ export async function listSavedVenues(uid) {
   const { data } = await supabase.from("saved_venues")
     .select("name, venue_id, lat, lng, category_id, used_count")
     .eq("user_id", uid).order("used_count", { ascending: false }).limit(8);
-  return (data || []).map((v) => ({ ...v, lat: Number(v.lat), lng: Number(v.lng) }));
+  return (data || []).map((v) => ({ ...v, lat: v.lat == null ? null : Number(v.lat), lng: v.lng == null ? null : Number(v.lng) }));
 }
 export async function toggleSavedVenue(uid, v, categoryId, kayitli) {
   if (kayitli) {

@@ -41,7 +41,11 @@ export default function CreateScreen({ user, onBack, onCreate, initial = null, p
   });
   const rakip = f.kind === "rakip";
   const [step, setStep] = useState(1);
-  const step1Ok = rakip ? (f.teamName.trim() && f.district && (f.venueMode === "sizde" || f.venue.trim())) : (f.title.trim() && f.venue.trim() && f.district);
+  // Geçmiş saate ilan açılmasın: bugün 22:00'de "Bugün 09:00" seçilince ilan doğar doğmaz "oynandı" sayılıyordu
+  const gecmis = (iso, tm) => !!iso && !!tm && new Date(`${iso}T${tm}:00`) <= new Date();
+  const pastTime = gecmis(f.dateISO, f.time);
+  const saatler = TIMES.filter((tm) => !gecmis(f.dateISO, tm));
+  const step1Ok = !pastTime && (rakip ? (f.teamName.trim() && f.district && (f.venueMode === "sizde" || f.venue.trim())) : (f.title.trim() && f.venue.trim() && f.district));
   const STEPS = ["Ne · nerede · ne zaman", "Kadro ve detaylar", "Özet ve yayın"];
   const posList = POSITIONS[Number(f.cat)] || [];
   const specified = Object.values(f.needs).reduce((a, b) => a + b, 0);
@@ -69,9 +73,10 @@ export default function CreateScreen({ user, onBack, onCreate, initial = null, p
   );
   const set = (k) => (v) => setF((s) => ({ ...s, [k]: v }));
   const tooMany = Number(f.needed) > Number(f.capacity);
-  const valid = rakip
+  const tooManyPos = specified > Number(f.needed);
+  const valid = !pastTime && (rakip
     ? f.teamName.trim() && f.district && f.dateISO && f.time && (f.venueMode === "sizde" || f.venue.trim())
-    : f.title.trim() && f.venue.trim() && f.district && f.dateISO && f.time && Number(f.needed) > 0 && !tooMany;
+    : f.title.trim() && f.venue.trim() && f.district && f.dateISO && f.time && Number(f.needed) > 0 && !tooMany && !tooManyPos);
   const submit = () => onCreate(Object.assign(rakip
     ? { ...f, title: f.title.trim() || `${f.format} rakip · ${GUNLER_UZUN[f.weekday]} ${f.time}`, needed: "1", capacity: String(Math.max(1, Math.round((formatPlayers(f.cat, f.format) || 14) / 2))), needs: {}, recurrence: "yok" }
     : f, { preset }));
@@ -196,10 +201,15 @@ export default function CreateScreen({ user, onBack, onCreate, initial = null, p
 
         <Field label={t("Saat")}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {TIMES.map((tm) => (
+            {saatler.map((tm) => (
               <Chip key={tm} label={tm} active={f.time === tm} onPress={() => set("time")(tm)} />
             ))}
           </ScrollView>
+          {pastTime && (
+            <Text style={{ fontSize: 12, fontWeight: "800", color: C.kit, marginTop: 6 }}>
+              {saatler.length ? t("Bu saat geçti — ileri bir saat seç.") : t("Bugün için saat kalmadı — yarını seç.")}
+            </Text>
+          )}
         </Field>
 
         </View>)}
@@ -240,7 +250,11 @@ export default function CreateScreen({ user, onBack, onCreate, initial = null, p
           </View>
           <View style={{ flex: 1 }}>
             <Field label={t("Eksik sayısı")}>
-              <Input keyboardType="number-pad" value={f.needed} onChangeText={set("needed")} />
+              <Input keyboardType="number-pad" value={f.needed} onChangeText={(v) => setF((s) => {
+                // eksik sayısı küçülünce mevki kotaları toplamı onu aşmasın
+                const top = Object.values(s.needs).reduce((a, b) => a + b, 0);
+                return { ...s, needed: v, needs: top > Number(v) ? {} : s.needs };
+              })} />
             </Field>
           </View>
           <View style={{ flex: 1 }}>
@@ -318,6 +332,11 @@ export default function CreateScreen({ user, onBack, onCreate, initial = null, p
         {tooMany && (
           <Text style={{ fontSize: 12, fontWeight: "800", color: C.kit }}>
             {t("Eksik sayısı toplam kadrodan büyük olamaz.")}
+          </Text>
+        )}
+        {!rakip && tooManyPos && (
+          <Text style={{ fontSize: 12, fontWeight: "800", color: C.kit }}>
+            {t("Aranan mevkilerin toplamı eksik sayısını aşamaz.")}
           </Text>
         )}</View>)}
         {step === 3 && (

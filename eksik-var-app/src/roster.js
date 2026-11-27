@@ -2,7 +2,8 @@
 // "1. Ali ✅", "2- Veli (kaleci)", "• Hasan", "Ozan 🧤" gibi satırlardan ad çıkarır.
 
 const GK_ISARET = /(\(kaleci\)|\bkaleci\b|🧤|\bgk\b)/i;
-const COP_SATIR = /(^https?:)|\b(maç|halı ?saha|kadro|liste|toplam|yedek|konum|adres)\b|\b\d{1,2}[:.]\d{2}\b/i;
+// "u" bayrağı ve harf-sınırı gerekir: \b, "ç" gibi ASCII dışı harfleri sınır saydığı için "Pazar maç" eşleşmiyordu.
+const COP_SATIR = /(^https?:)|(?<![\p{L}\d])(maç(ı|a|ta|tır|ımız)?|halı ?saha(sı)?|kadro(su|muz)?|liste(si|miz)?|toplam|yedek(ler)?|konum|adres(i)?)(?![\p{L}\d])|\b\d{1,2}[:.]\d{2}\b/iu;
 
 export function parseRoster(text) {
   const gorulen = new Set();

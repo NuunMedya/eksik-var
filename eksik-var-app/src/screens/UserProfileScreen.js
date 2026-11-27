@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { t } from "../i18n";
 import { C, onThemeChange } from "../theme";
 import { Avatar, Stars, BACK_ICON, RolRozeti, GuvenRozeti } from "../components";
-import { posLabel, relInfo, relColor, guvenInfo, CATEGORIES, timeAgo } from "../data";
+import { posLabel, relInfo, guvenInfo, CATEGORIES, timeAgo } from "../data";
 import { earnedBadges } from "../badges";
 
 export default function UserProfileScreen({ user, comments = [], rules, blocked = false, loading = false,

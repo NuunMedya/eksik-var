@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View, Text, TouchableOpacity, TextInput, FlatList,
   KeyboardAvoidingView, Platform, Image, StyleSheet, Keyboard, Alert,
@@ -93,20 +93,32 @@ export default function ChatRoomScreen({
     const p = t0.slice(k + 6).split("|");
     return p[0] && p[0].startsWith("http") ? { url: p[0], sec: p[1] || "0" } : null;
   };
+  // Ekrandan çıkınca: süre sayacı, mikrofon kaydı ve çalan sesli mesaj dursun
+  useEffect(() => () => {
+    clearInterval(recTimer.current); recTimer.current = null;
+    if (kayitRef.current) { kayitRef.current = false; try { recorder.stop(); } catch {} }
+    try { if (soundRef.current) soundRef.current.remove(); } catch {}
+    soundRef.current = null;
+  }, []);
+  const kayitRef = useRef(false);
   const kayitBaslat = async () => {
+    if (kayitRef.current) return;      // çift dokunuş iki sayaç başlatıyordu
+    kayitRef.current = true;
     try {
       const izin = await AudioModule.requestRecordingPermissionsAsync();
-      if (!izin.granted) return;
+      if (!izin.granted) { kayitRef.current = false; return; }
       await AudioModule.setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
       await recorder.prepareToRecordAsync();
       recorder.record();
       setRec(true); setRecSec(0);
+      clearInterval(recTimer.current);
       recTimer.current = setInterval(() => setRecSec((x) => x + 1), 1000);
-    } catch {}
+    } catch { kayitRef.current = false; }
   };
   const kayitBitir = async (gonder) => {
-    clearInterval(recTimer.current);
+    clearInterval(recTimer.current); recTimer.current = null;
     if (!rec) return;
+    kayitRef.current = false;
     setRec(null);
     try {
       await recorder.stop();
