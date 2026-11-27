@@ -9,7 +9,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { C, onThemeChange } from "../theme";
 import { contactRules, DEFAULT_SETTINGS, buildShareText, buildInviteText, buildTeamInvite, extractIban, guestPlayers, buildMatchSummary, REPORT_REASONS, memberFromOrg, openPositions } from "../data";
-import { useDeepLink } from "../deeplink";
+import { useDeepLink, bekleyenDavet, davetTemizle } from "../deeplink";
 import { copyText } from "../clipboard";
 import { pickPhoto } from "../avatar";
 import OdemeSheet from "../screens/OdemeSheet";
@@ -357,6 +357,15 @@ export default function LiveApp() {
   // Derin bağlantı: kullanıcı ve etkinlikler hazır olunca ilgili etkinliği aç
   const [pendingLink, setPendingLink] = useState(null);
   useDeepLink(setPendingLink);
+  // Davet linkiyle gelen yeni hesap → davetçiye yaz (sunucu 7 gün / tek sefer kuralını uygular)
+  useEffect(() => {
+    if (!me) return;
+    bekleyenDavet().then(async (kod) => {
+      if (!kod) return;
+      try { const ok = await api.davetKaydet(kod); if (ok) { olay("davet_kaydedildi"); showToast(t("@{p0} seni davet etmişti — hoş geldin 🎉", { p0: kod })); } } catch { /* sessiz */ }
+      davetTemizle();
+    });
+  }, [me && me.id]);
   useEffect(() => {
     if (!pendingLink || !me) return;
     if (events.some((e) => e.id === pendingLink)) { setTab("home"); setView({ name: "event", id: pendingLink }); setPendingLink(null); }

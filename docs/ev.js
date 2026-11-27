@@ -111,6 +111,23 @@
         el.innerHTML = '<h1>Bir maça davet edildin ⚽</h1><p>Detaylar şu an yüklenemedi; uygulamada açabilirsin.</p><a class="btn b1" href="eksikvar://e/' + esc(id) + '">Uygulamada aç</a>' + indirDugmeleri();
       });
     },
+    davet: function (kod, el) {
+      var derin = "eksikvar://d/" + encodeURIComponent(kod);
+      var ua = navigator.userAgent || "";
+      rpc("public_davetci", { p_kod: kod }).then(function (d) {
+        var ad = d && d.ad ? d.ad : "Bir arkadaşın";
+        el.innerHTML =
+          '<div class="ev-hero"><div class="ev-hero-ico">🎟️</div><div><div class="ev-hero-k">Davet</div><h1 class="ev-hero-t">' + esc(ad) + " seni Eksik Var'a çağırıyor</h1></div></div>" +
+          '<p style="margin-top:14px">"Bir kişi eksiğiz" derdi bitsin: maçını aç, eksik oyuncular gelsin; ya da yakınındaki maçlara tek dokunuşla katıl. Ücretsiz, reklamsız.</p>' +
+          (d && (d.sehir || d["maç"] > 0) ? '<div class="ev-pills" style="margin-top:10px">' + (d.sehir ? '<span class="pill">📍 ' + esc(d.sehir) + "</span>" : "") + (d["maç"] > 0 ? '<span class="pill ok">' + esc(d["maç"]) + " maç</span>" : "") + (d.guven != null ? '<span class="pill ok">🛡️ güven ' + esc(d.guven) + "</span>" : "") + "</div>" : "") +
+          '<p class="ev-cta-t">Uygulamayı indir, kayıt ol — davet otomatik işlenir</p>' + indirDugmeleri() +
+          '<a class="btn b2" href="' + derin + '">Uygulama yüklüyse aç</a>' +
+          '<div class="meta">Kayıt olduğunda ' + esc(ad) + " davetin karşılık bulduğunu görecek. 3 davet getiren 🎟️ Davetçi rozeti kazanır.</div>";
+        if (/android|iphone|ipad|ipod/i.test(ua)) setTimeout(function () { location.href = derin; }, 1200);
+      }).catch(function () {
+        el.innerHTML = '<h1>Eksik Var\'a davetlisin ⚽</h1><p>Uygulamayı indir, kayıt ol — davet otomatik işlenir.</p>' + indirDugmeleri();
+      });
+    },
     kart: kart, indir: indirDugmeleri,
   };
 })();

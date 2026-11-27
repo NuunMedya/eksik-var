@@ -36,6 +36,11 @@
               "scheme": "https",
               "host": "eksikvarapp.com",
               "pathPrefix": "/e/"
+            },
+            {
+              "scheme": "https",
+              "host": "eksikvarapp.com",
+              "pathPrefix": "/d/"
             }
           ],
           "category": [

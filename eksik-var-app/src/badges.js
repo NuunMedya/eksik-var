@@ -15,6 +15,7 @@ export const BADGES = [
   { id: "org5",   icon: "📋", title: "Organizatör", desc: "5 maç organize etti",               value: (u) => num(u.organized), goal: 5 },
   { id: "odeme10", icon: "💳", title: "Düzenli ödeyen", desc: "10 maçın parasını zamanında ödedi", value: (u) => num(u.odemeSayisi), goal: 10 },
   { id: "guven90", icon: "🛡️", title: "Güven 90+",  desc: "Güven puanı 90'ın üzerine çıktı",  flag: (u) => num(u.guven) >= 90 },
+  { id: "davetci", icon: "🎟️", title: "Davetçi",     desc: "3 arkadaşını uygulamaya getirdi",   value: (u) => num(u.davetSayisi), goal: 3 },
   { id: "golcu",  icon: "⚽", title: "Golcü",       desc: "10 gol attı",                       value: (u) => num(u.totals && u.totals.goals), goal: 10 },
 ];
 

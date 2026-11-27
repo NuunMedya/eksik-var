@@ -132,7 +132,7 @@ export default function ProfileScreen({ user, pendingRate, onRate, onLogout, onS
         </View>
         <View style={{ flex: 1 }}>
           <Text style={{ fontWeight: "800", fontSize: 14, color: C.ink }}>{t("Arkadaşını davet et")}</Text>
-          <Text style={{ fontSize: 12, color: C.faint, marginTop: 2 }}>{t("Ekibini uygulamaya taşı, kadro hiç eksik kalmasın")}</Text>
+          <Text style={{ fontSize: 12, color: C.faint, marginTop: 2 }}>{user.davetSayisi > 0 ? t("{p0} kişi senin linkinle katıldı · eksikvarapp.com/d/{p1}", { p0: user.davetSayisi, p1: user.username }) : t("Linkin: eksikvarapp.com/d/{p0} · 3 davet = 🎟️ rozet", { p0: user.username })}</Text>
         </View>
         <Ionicons name="share-social-outline" size={18} color={C.kit} />
       </TouchableOpacity>

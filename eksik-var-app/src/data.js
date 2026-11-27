@@ -393,7 +393,7 @@ export function buildInviteText(user) {
     `Selam! Halı saha / basket / voleybol için kadro tamamlama uygulaması kullanıyorum: Eksik Var.`,
     `"Bir kişi eksiğiz" mesajı yerine talep açıyorsun, gelenler başvuruyor, çift onayla kadro doluyor; kim güvenilir kim gelmiyor puanla belli.`,
     ``,
-    `İndir: ${APP_LINK}?d=${user.username}`,
+    `İndir: ${APP_LINK}/d/${user.username}`,
   ].join("\n");
 }
 

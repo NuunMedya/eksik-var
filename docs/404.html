@@ -24,6 +24,7 @@
       <a class="btn b1" href="/">Ana sayfaya dön</a>
     </div>
     <div id="mac" style="display:none"><div class="yuk">Maç yükleniyor…</div></div>
+    <div id="davet" style="display:none"></div>
   </div>
 </div>
 <script src="/ev.js"></script>
@@ -31,6 +32,14 @@
   (function(){
     var m = location.pathname.match(/\/e\/([A-Za-z0-9-]+)/);
     var q = location.search || "";
+    var dv = location.pathname.match(/\/d\/([A-Za-z0-9_]+)/);
+    if (dv) {
+      var kutuD = document.getElementById("davet"); kutuD.style.display = "block";
+      document.title = "Eksik Var'a davetlisin ⚽";
+      kutuD.innerHTML = '<div class="yuk">Davet yükleniyor…</div>';
+      EV.davet(dv[1], kutuD);
+      return;
+    }
     if (!m) { document.getElementById("yok").style.display = "block"; return; }
     var id = m[1], derin = "eksikvar://e/" + id + q;
     var kutu = document.getElementById("mac"); kutu.style.display = "block";
